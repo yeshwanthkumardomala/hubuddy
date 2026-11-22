@@ -1,0 +1,90 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// Bootstrap (first-login) credentials. They are TEMPORARY: the app forces a PIN
+// change on the first successful login and never accepts the bootstrap PIN again.
+// Override them without editing this file via local.properties (not committed):
+//   deskhub.bootstrapLogin=...
+//   deskhub.bootstrapPin=...
+// or the environment variables DESKHUB_BOOTSTRAP_LOGIN / DESKHUB_BOOTSTRAP_PIN.
+def localProps = new Properties()
+def localFile = rootProject.file('local.properties')
+if (localFile.exists()) localFile.withInputStream { localProps.load(it) }
+def bootstrapLogin = localProps.getProperty('deskhub.bootstrapLogin') ?: System.getenv('DESKHUB_BOOTSTRAP_LOGIN') ?: '123456789'
+def bootstrapPin = localProps.getProperty('deskhub.bootstrapPin') ?: System.getenv('DESKHUB_BOOTSTRAP_PIN') ?: '123456'
+
+android {
+    namespace 'com.sidya.deskhub'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.sidya.deskhub'
+        minSdk 28          // Android 9 (Vivo 1902)
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+        buildConfigField 'String', 'BOOTSTRAP_LOGIN', "\"${bootstrapLogin}\""
+        buildConfigField 'String', 'BOOTSTRAP_PIN', "\"${bootstrapPin}\""
+        resourceConfigurations += ['en']
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        release {
+            // Signed with the local debug key so the small, optimised build can be sideloaded
+            // for testing. Use your own keystore (never committed) for any real distribution.
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            returnDefaultValues = false
+            all {
+                // Robolectric's sandbox needs some headroom.
+                maxHeapSize = '1g'
+                // Optional: where Robolectric downloads its Android runtime jars (default Maven Central).
+                if (project.hasProperty('robolectricRepoUrl')) {
+                    systemProperty 'robolectric.dependency.repo.url', project.property('robolectricRepoUrl')
+                }
+            }
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/*.kotlin_module', 'kotlin/**', 'DebugProbesKt.bin', 'META-INF/versions/**']
+        }
+    }
+
+    lint {
+        abortOnError true
+        checkReleaseBuilds false
+        disable 'ObsoleteSdkInt', 'GradleDependency', 'OldTargetApi', 'SetTextI18n', 'HardcodedText', 'IconLauncherShape', 'MonochromeLauncherIcon'
+    }
+}
+
+dependencies {
+    // Deliberately no AndroidX / Material / OkHttp: framework widgets, HttpURLConnection
+    // and org.json keep the APK small and fast on a low-end Android 9 phone.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+    testImplementation 'org.json:json:20240303' // real org.json for plain JVM tests
+}

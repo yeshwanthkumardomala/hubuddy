@@ -1,0 +1,25 @@
+# Build outputs and caches
+build/
+.gradle/
+*.apk
+*.aab
+__pycache__/
+*.pyc
+.venv/
+
+# Local machine configuration and secrets
+local.properties
+*.keystore
+*.jks
+keystore.properties
+.env
+.env.*
+config.toml
+bridge_devices.json
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
