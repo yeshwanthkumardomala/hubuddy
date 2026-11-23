@@ -31,13 +31,11 @@ and files both ways, and let the phone turn into a landscape clock-and-status di
 
 ---
 
-## What's new
+## What's new in 3.5.1
 
-* **3.5.1:** no more flashing terminal (the cause of the glitching). The Windows window is now an Edge app window showing Hubuddy's page, with a tray icon (no more repaint glitches). **3.4.0:** a new logo, a Windows window that opens instantly and never freezes, a new-generation window design (dark/light, status pill, per-phone remote switch),
-  and **keyboard chords** on the phone: hold Ctrl / Shift / Alt / Win with one finger and tap another key, F1 to F12 included.
-* **3.3.0:** no sign-in, and a rebuilt trackpad (tap, two-finger scroll/right-click, pinch zoom, drag, speed slider).
-* **3.2.0:** Linux (a small Debian package that runs without a desktop). **3.1.0:** remote control and Wake-on-LAN. **3.0.0:** QR/PIN pairing, encrypted and pinned.
-  All versions: [release notes](docs/hubuddy/RELEASE_NOTES.md).
+* **No more glitching on Windows.** The PC window is now an Edge app window with a tray icon, and helper programs run fully hidden, so no terminal flashes on screen.
+* **Keyboard chords** on the phone: hold Ctrl / Shift / Alt / Win with one finger and tap another key (F1 to F12, A to Z, 0 to 9).
+* **A real trackpad**, **no sign-in**, a **Linux package**, and the new **logo**. Full history: [release notes](docs/hubuddy/RELEASE_NOTES.md).
 
 ## Connect in a minute: no developer options, no cable, no typing IPs
 
@@ -119,7 +117,7 @@ pose as your computer. [How pairing works](docs/hubuddy/ARCHITECTURE.md#pairing-
 | **Secure by design** | No sign-in needed: the app opens straight to the dashboard (an optional PIN lock with lockout and timeout can be switched on in Settings), Keystore-encrypted secrets, per-PC pinned certificates, one-time pairing secrets, per-phone tokens, private networks only |
 | **Tiny and fast** | Native Kotlin with no AndroidX, Material or OkHttp; no background service; polling stops when the app is not visible |
 
-Planned next: brightness, app launcher and decks, screenshots, timers and world clocks, a rebuilt Settings main page, and Hindi and Telugu. See [release notes](docs/hubuddy/RELEASE_NOTES.md).
+**Roadmap:** brightness, an app and window launcher with shortcut decks, PC screenshots, timers and world clocks, a rebuilt Settings page, Hindi and Telugu. See [release notes](docs/hubuddy/RELEASE_NOTES.md).
 
 ## How it works
 
