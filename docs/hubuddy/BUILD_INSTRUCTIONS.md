@@ -73,11 +73,6 @@ Locally on Windows: `pip install -r agent/requirements.txt pyinstaller`, then `p
 `tools/interop.sh` starts the real PC program and runs the app's real client code against it (QR and PIN pairing, API,
 messages, files). Needs Python with `agent/requirements.txt`, JDK 17 and the Android SDK.
 
-## Python-source download
-
-`python tools/package_agent.py` builds `releases/Hubuddy-Agent-<version>.zip` and its checksum from `agent/`
-(without tests, caches or your `config.toml`). Same sources give the same zip.
-
 ## Screenshots
 
 `gradlew testDebugUnitTest --tests "*Screenshots*" -Pscreenshots=<folder>` renders the real screens with sample data.

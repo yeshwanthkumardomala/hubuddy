@@ -25,3 +25,5 @@ agent_devices.json
 .DS_Store
 Thumbs.db
 dist/
+
+.kotlin/

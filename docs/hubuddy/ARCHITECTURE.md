@@ -86,5 +86,5 @@ docs/hubuddy/      this documentation and screenshots
 installer/         Inno Setup recipe for HubuddySetup.exe
 .github/workflows/ CI: tests, Windows build, installer, release
 releases/          downloads: APK, Hubuddy.exe, HubuddySetup.exe, checksums
-tools/             interop.sh, make_test_pki.py, package_agent.py
+tools/             interop.sh, make_test_pki.py, make_logo.py
 ```

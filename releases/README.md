@@ -10,9 +10,8 @@ The same files are on the [GitHub Releases page](https://github.com/yeshwanthkum
 | **Hubuddy-3.5.1.exe** | the same program, portable (no install) | Windows 10 or 11 |
 | **hubuddy_3.5.1_all.deb** | the PC program for Linux (no desktop needed, any CPU) | Debian 12+, Ubuntu 22.04+ |
 
-Each file has a `.sha256` next to it. Verify: `certutil -hashfile <file> SHA256` (Windows) or `sha256sum -c <file>.sha256`.
+Only the newest version is kept here: older downloads are deleted automatically when a new version is published. Each file has a `.sha256` next to it. Verify: `certutil -hashfile <file> SHA256` (Windows) or `sha256sum -c <file>.sha256`.
 
-Older: `Hubuddy-3.5.0.*`, `Hubuddy-3.4.0.*`, `Hubuddy-3.3.0.*`, `Hubuddy-3.2.0.*`, `Hubuddy-3.1.0.*`, `Hubuddy-3.0.0.*` (pairing only, no remote control), `Hubuddy-2.0.0.apk` and `Hubuddy-Agent-2.0.0.zip` are the previous version (USB/adb pairing); they do not work with 3.x.
 
 ## Install
 

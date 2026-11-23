@@ -188,6 +188,15 @@ jobs:
           else
             gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Hubuddy ${ver}" --generate-notes "${files[@]}"
           fi
+      - name: Delete older releases and their tags (only the newest version is kept)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then ver="${GITHUB_REF_NAME#v}"; else ver="${{ inputs.version }}"; fi
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName -q '.[].tagName' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^v${ver}$" | while read -r t; do
+            echo "deleting old release $t"
+            gh release delete "$t" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+          done
       - name: Also list the downloads in releases/ on the branch
         env:
           GH_TOKEN: ${{ github.token }}
@@ -197,12 +206,14 @@ jobs:
           cp "assets/Hubuddy-${ver}.apk" "assets/Hubuddy-${ver}.exe" "assets/HubuddySetup-${ver}.exe" "assets/hubuddy_${ver}_all.deb" repo/releases/
           shot="$(find "$GITHUB_WORKSPACE/assets/hubuddy-windows" -name window.png | head -n1)"
           if [ -n "$shot" ]; then mkdir -p repo/docs/hubuddy/screenshots/pc && cp "$shot" repo/docs/hubuddy/screenshots/pc/window.png; fi
+          # keep only this version in releases/ (plus the README): older downloads are deleted automatically
+          find repo/releases -maxdepth 1 -type f ! -name 'README.md' ! -name "*${ver}*" -delete
           cd repo/releases
           for f in "Hubuddy-${ver}.apk" "Hubuddy-${ver}.exe" "HubuddySetup-${ver}.exe" "hubuddy_${ver}_all.deb"; do sha256sum "$f" > "$f.sha256"; done
           cd ..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f releases
+          git add -A -f releases
           git add docs/hubuddy/screenshots/pc/window.png 2>/dev/null || true
           git commit -m "Add Hubuddy ${ver} downloads built by CI [skip ci]" || exit 0
           git push origin feature/hubuddy-app
