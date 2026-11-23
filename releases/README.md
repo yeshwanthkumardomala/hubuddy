@@ -5,20 +5,20 @@ The same files are on the [GitHub Releases page](https://github.com/yeshwanthkum
 
 | Download | What it is | Runs on |
 | --- | --- | --- |
-| **Hubuddy-3.4.0.apk** | the phone app | Android 5.0 or newer |
-| **HubuddySetup-3.4.0.exe** | installer for the PC program (Start menu, optional firewall rule and autostart) | Windows 10 or 11 |
-| **Hubuddy-3.4.0.exe** | the same program, portable (no install) | Windows 10 or 11 |
-| **hubuddy_3.4.0_all.deb** | the PC program for Linux (no desktop needed, any CPU) | Debian 12+, Ubuntu 22.04+ |
+| **Hubuddy-3.5.1.apk** | the phone app | Android 5.0 or newer |
+| **HubuddySetup-3.5.1.exe** | installer for the PC program (Start menu, optional firewall rule and autostart) | Windows 10 or 11 |
+| **Hubuddy-3.5.1.exe** | the same program, portable (no install) | Windows 10 or 11 |
+| **hubuddy_3.5.1_all.deb** | the PC program for Linux (no desktop needed, any CPU) | Debian 12+, Ubuntu 22.04+ |
 
 Only the newest version is kept here: older downloads are deleted automatically when a new version is published. Each file has a `.sha256` next to it. Verify: `certutil -hashfile <file> SHA256` (Windows) or `sha256sum -c <file>.sha256`.
 
 
 ## Install
 
-1. **PC:** run `HubuddySetup-3.4.0.exe` (or `Hubuddy-3.4.0.exe`). Windows may say "unknown publisher" because the program is
+1. **PC:** run `HubuddySetup-3.5.1.exe` (or `Hubuddy-3.5.1.exe`). Windows may say "unknown publisher" because the program is
    not code-signed: *More info → Run anyway*.
 2. **Phone:** open the APK and allow *install unknown apps*.
-   Linux: `sudo apt install ./hubuddy_3.4.0_all.deb`, then `hubuddy --show-invite`.
+   Linux: `sudo apt install ./hubuddy_3.5.1_all.deb`, then `hubuddy --show-invite`.
 3. **Pair:** on the PC click *Pair a phone*; in the app choose Settings → Add a PC or laptop → *Scan QR code*. No camera: use
    *Pair with a PIN* on the PC and *Find PCs on this network* in the app. Same Wi-Fi/LAN or USB tethering; no developer options.
 
