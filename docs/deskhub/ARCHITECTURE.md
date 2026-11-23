@@ -34,8 +34,13 @@ instead of, the board (`--also-board` keeps the ESP32 display working from the s
 ## Android app (`android/deskhub`)
 
 * **No AndroidX, Material or OkHttp.** Framework widgets, `HttpURLConnection` and the built-in
-  `org.json`. Debug APK about 2.6 MB (mostly Kotlin stdlib), R8 release APK about 140 KB. No native
-  code, so the APK runs on any ABI the Vivo reports.
+  `org.json`. Debug APK about 0.95 MB, R8 release APK about 80 KB. No native code, so it runs on
+  any CPU type.
+* **Runs on Android 5.0+ (minSdk 21).** Nothing requires a newer API without a fallback:
+  PBKDF2-SHA256 is implemented on HmacSHA256 (the platform version needs Android 8), Base64
+  comes from `android.util`, and network type uses `activeNetworkInfo` before Android 6. On
+  Android 5.x, which has no AES keys in the Keystore, secrets stay in memory only (you re-pair
+  after an app restart) and are never written as plain text.
 * **Views built in code** (`ui/Ui.kt`) with a dark charcoal or pure-black palette, walnut
   hairline accents, teal highlights and no animations.
 * **Single activity, five tabs**, with secondary pages pushed on a small back stack:

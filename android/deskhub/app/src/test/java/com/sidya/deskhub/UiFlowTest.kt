@@ -44,7 +44,8 @@ class TestCipher : SecretCipher {
 }
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28]) // Android 9, the Vivo 1902's version
+// Every test runs on each Android version: 5.0, 7.0, 8.0, 9 (Vivo 1902), 11, 14.
+@Config(sdk = [21, 24, 26, 28, 30, 34])
 class UiFlowTest {
     private val controllers = ArrayList<ActivityController<*>>()
 

@@ -3,6 +3,7 @@ package com.sidya.deskhub.ui.screens
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.view.View
 import com.sidya.deskhub.data.DashState
 import com.sidya.deskhub.net.ApiResult
@@ -47,8 +48,13 @@ class NetworkScreen(host: MainActivity) : Screen(host) {
     companion object {
         fun phoneNetwork(ctx: Context): String = try {
             val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            if (Build.VERSION.SDK_INT < 23) legacyNetwork(cm) else modernNetwork(cm)
+        } catch (e: Exception) { "unknown" }
+
+        @android.annotation.TargetApi(23)
+        private fun modernNetwork(cm: ConnectivityManager): String {
             val caps = cm.getNetworkCapabilities(cm.activeNetwork)
-            when {
+            return when {
                 caps == null -> "offline"
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Mobile data"
@@ -56,6 +62,18 @@ class NetworkScreen(host: MainActivity) : Screen(host) {
                 caps.hasTransport(NetworkCapabilities.TRANSPORT_USB) -> "USB"
                 else -> "connected"
             }
-        } catch (e: Exception) { "unknown" }
+        }
+
+        @Suppress("DEPRECATION")
+        private fun legacyNetwork(cm: ConnectivityManager): String {
+            val info = cm.activeNetworkInfo ?: return "offline"
+            if (!info.isConnected) return "offline"
+            return when (info.type) {
+                ConnectivityManager.TYPE_WIFI -> "Wi-Fi"
+                ConnectivityManager.TYPE_MOBILE -> "Mobile data"
+                ConnectivityManager.TYPE_ETHERNET -> "Ethernet"
+                else -> "connected"
+            }
+        }
     }
 }

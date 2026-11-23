@@ -2,7 +2,8 @@
 
 ## Hubuddy DeskHub — SIDYA Edition
 
-An Android desk dashboard for a Windows 11 PC, built for the Vivo 1902 (Android 9 / API 28+).
+An Android desk dashboard for a Windows 11 PC, built for the Vivo 1902 and compatible with any Android 5.0+ phone (API 21+).
+iPhones and other devices can use the bridge's web dashboard in a browser.
 It is adapted from [DeskHub](https://github.com/zacharyinserra/deskhub) (MIT).
 
 * **App:** [`android/deskhub`](android/deskhub). Native Kotlin, package `com.sidya.deskhub`.

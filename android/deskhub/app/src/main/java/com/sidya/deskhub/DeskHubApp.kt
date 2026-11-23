@@ -2,6 +2,7 @@ package com.sidya.deskhub
 
 import android.app.Application
 import android.content.Context
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import com.sidya.deskhub.auth.AuthManager
@@ -27,12 +28,13 @@ class DeskHubApp : Application() {
         private set
 
     val secrets: SecretStore by lazy {
-        val cipher = cipherOverride ?: KeystoreCipher()
         try {
+            // Android 5.x has no AES keys in the Keystore: keep secrets in memory there.
+            val cipher = cipherOverride ?: if (Build.VERSION.SDK_INT >= 23) KeystoreCipher() else throw IllegalStateException("no AES keystore")
             val probe = cipher.encrypt(byteArrayOf(1, 2, 3))
             check(cipher.decrypt(probe).contentEquals(byteArrayOf(1, 2, 3)))
             EncryptedSecretStore(kv, cipher)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             // Never fall back to plaintext on disk: keep secrets in memory for this run.
             secureStorageAvailable = false
             MemorySecretStore()

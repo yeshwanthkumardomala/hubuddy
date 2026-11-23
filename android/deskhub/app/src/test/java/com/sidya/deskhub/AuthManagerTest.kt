@@ -34,7 +34,7 @@ class AuthManagerTest {
     @Test fun pinNeverStoredInPlaintext() {
         auth()
         kv.map.values.forEach { assertFalse(it.toString().contains("123456\"")); assertNotEquals("123456", it) }
-        assertTrue((kv.getString("auth.pinHash") ?: "").startsWith("pbkdf2$"))
+        assertTrue((kv.getString("auth.pinHash") ?: "").startsWith("pbkdf2-sha256$"))
     }
 
     @Test fun wrongPinAndWrongLoginRejected() {
@@ -122,8 +122,24 @@ class PinHasherTest {
     }
 
     @Test fun rejectsGarbage() {
-        assertFalse(h.verify("1", null)); assertFalse(h.verify("1", "")); assertFalse(h.verify("1", "pbkdf2\$x\$y\$z"))
+        assertFalse(h.verify("1", null)); assertFalse(h.verify("1", "")); assertFalse(h.verify("", h.hash("482916"))); assertFalse(h.verify("1", "pbkdf2\$x\$y\$z"))
         assertFalse(h.verify("1", "md5\$1000\$AAAA\$BBBB")); assertFalse(h.verify("1", "pbkdf2\$10\$AAAA\$BBBB"))
+    }
+
+    @Test fun matchesJdkPbkdf2Sha256() {
+        // Our portable implementation must equal the standard algorithm (JDK reference).
+        val salt = ByteArray(16) { it.toByte() }
+        for (pin in listOf("482916", "123456", "00000000")) {
+            val ref = javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+                .generateSecret(javax.crypto.spec.PBEKeySpec(pin.toCharArray(), salt, 2000, 256)).encoded
+            assertTrue(ref.contentEquals(PinHasher.derive(pin, salt, 2000)))
+        }
+    }
+
+    @Test fun rfc7914TestVector() {
+        // RFC 7914 section 11: PBKDF2-HMAC-SHA256("passwd", "salt", c=1), first 32 bytes.
+        assertEquals("55ac046e56e3089fec1691c22544b605f94185216dde0465e68b9d57c20dacbc",
+            PinHasher.hex(PinHasher.derive("passwd", "salt".toByteArray(), 1)))
     }
 
     @Test fun policy() {

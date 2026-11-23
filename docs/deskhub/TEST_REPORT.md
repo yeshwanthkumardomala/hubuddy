@@ -1,11 +1,12 @@
-# Test report — Hubuddy DeskHub 1.0.0
+# Test report — Hubuddy DeskHub 1.1.0
 
-Date: 2026-11-22 · Environment: Linux build container (cloud), OpenJDK 21, Gradle 8.14.3,
+Date: 2026-11-23 · Environment: Linux build container (cloud), OpenJDK 21, Gradle 8.14.3,
 AGP 8.7.3, Kotlin 2.0.21, Android SDK Platform 34 / Build-Tools 34, Robolectric 4.14.1, Python 3.13.
 
 > **Physical Vivo 1902 testing: PENDING.** No phone was attached (`adb devices -l` listed no
 > devices), and this container has no KVM, so no Android emulator could run. Android 9
-> behaviour was tested with Robolectric configured for **API 28**. Nothing here claims the APK
+> behaviour was tested with Robolectric on **Android 5.0, 5.1, 7.0, 8.0, 9, 11 and 14**
+> (API 21, 22, 24, 26, 28, 30, 34). Nothing here claims the APK
 > has run on the Vivo 1902.
 
 ## Summary
@@ -13,9 +14,10 @@ AGP 8.7.3, Kotlin 2.0.21, Android SDK Platform 34 / Build-Tools 34, Robolectric 
 | Suite | Result |
 | --- | --- |
 | Compilation (`assembleDebug`, `assembleRelease`) | ✅ BUILD SUCCESSFUL |
-| Android unit + Robolectric UI tests (`testDebugUnitTest`) | ✅ **42 passed, 0 failed, 0 skipped** |
-| Android Lint (`lintDebug`, includes manifest checks) | ✅ 0 errors, 1 expected warning (`InsecureBaseConfiguration`: cleartext HTTP to the LAN companion, by design and restricted in code) |
-| APK inspection (`aapt2 dump badging`) | ✅ package `com.sidya.deskhub`, minSdk 28, targetSdk 34, permissions INTERNET + ACCESS_NETWORK_STATE only, no native code |
+| Android unit + Robolectric UI tests (`testDebugUnitTest`) | ✅ **106 passed, 0 failed, 0 skipped** |
+| Android version coverage (UI tests) | ✅ API 21 (13 tests), 22 (1), 24, 26, 28, 30, 34 (12 each): all passed |
+| Android Lint (`lintDebug`, includes manifest checks) | ✅ 0 errors; `NewApi` clean for minSdk 21. 2 expected warnings: `InsecureBaseConfiguration` (cleartext HTTP to the LAN companion, by design and restricted in code) and `UnusedAttribute` (`networkSecurityConfig` is ignored below Android 7, which allows that traffic anyway) |
+| APK inspection (`aapt2 dump badging`) | ✅ package `com.sidya.deskhub`, minSdk **21**, targetSdk 34, permissions INTERNET + ACCESS_NETWORK_STATE only, no native code |
 | Bridge tests (`python -m unittest`, companion-bridge) | ✅ **13 passed** |
 | Bridge ↔ real DeskHub companion (Linux smoke test) | ✅ snapshot carried live CPU/RAM/disk/network stats, Claude usage, calendar and 8 shortcut tiles |
 | Web dashboard in headless Chromium (360 px wide) | ✅ paired, rendered live data, no JS errors, no horizontal scroll |
@@ -27,7 +29,7 @@ AGP 8.7.3, Kotlin 2.0.21, Android SDK Platform 34 / Build-Tools 34, Robolectric 
 | # | Check | How it was tested | Result |
 | --- | --- | --- | --- |
 | 1 | Project compilation | `gradlew assembleDebug assembleRelease` | ✅ |
-| 2 | APK generation | `app/build/outputs/apk/debug/app-debug.apk` (2,671,521 bytes); release 144,206 bytes | ✅ |
+| 2 | APK generation | `app/build/outputs/apk/debug/app-debug.apk` (956,974 bytes); release 79,355 bytes | ✅ |
 | 3 | Manifest validation | Lint + `aapt2 dump badging` | ✅ |
 | 4 | Login screen | `UiFlowTest.loginScreenShowsFieldsAndMasksPin` | ✅ (this test found a real bug, PIN not masked, which was fixed) |
 | 5 | Correct initial login | `UiFlowTest.firstLoginForcesPinChangeThenOpensDashboard`, `AuthManagerTest.bootstrapLogin…` | ✅ |
@@ -41,17 +43,20 @@ AGP 8.7.3, Kotlin 2.0.21, Android SDK Platform 34 / Build-Tools 34, Robolectric 
 | 13 | API reconnection | `DashboardRepositoryTest.reconnectsAfterOutage`, `backoffGrowsAndCaps` | ✅ |
 | 14 | Invalid server address | `AddressValidatorTest.*`, `invalidOrPublicAddressRejectedBeforeAnyRequest`, `UiFlowTest.settingsRejectsPublicAddress…`, `nothingListeningIsUnreachable` | ✅ |
 | 15 | Configuration persistence | `SettingsTest.persistsAndClamps`, `UiFlowTest.settingsRejectsPublicAddressAndPersistsValidOne` | ✅ |
-| 16 | Android 9 compatibility | minSdk 28; Robolectric `@Config(sdk=[28])`; Lint `NewApi` clean; only APIs ≤ 28 used without guards | ✅ assessed in simulation · ⏳ device pending |
+| 16 | Android 9 compatibility (and Android 5.0+ in general) | minSdk 21; every UI test on API 21/24/26/28/30/34; `OldAndroidCompatTest` on API 21/22 without Keystore; Lint `NewApi` clean | ✅ in simulation · ⏳ real devices pending |
 | 17 | Crash / exception handling | `UiFlowTest.malformedPayloadDoesNotCrash`, `connectionTestToDeadCompanionShowsErrorWithoutCrash`, `rotationKeepsDashboard` | ✅ |
 
-## Android tests run (42)
+## Android tests run (106 = 34 JVM tests + 12 UI tests × 6 Android versions + 1 compat test × 2 versions)
 
 * **AuthManagerTest (11):** bootstrap login requires PIN change · PIN never stored in plaintext ·
   wrong PIN / wrong login rejected · lockout after 5 failures, then expiry · lockout grows and
   persists across restart · change-PIN flow (wrong current, mismatch, weak, same-as-temporary,
   success, temporary PIN dead afterwards) · change needs a session · persistence across
   restart · inactivity timeout · logout · clock moved back cannot lock forever.
-* **PinHasherTest (3):** salted and verifiable · rejects malformed hashes · PIN policy.
+* **PinHasherTest (5):** salted and verifiable · rejects malformed hashes · PIN policy · matches the
+  JDK's PBKDF2WithHmacSHA256 · RFC 7914 test vector.
+* **OldAndroidCompatTest (API 21, 22):** no Keystore → in-memory secrets, login + PIN change +
+  dashboard + legacy network API work, and no secret is written to preferences.
 * **AddressValidatorTest (2), SettingsTest (2):** local addresses accepted; public, malformed
   and non-HTTP rejected; settings persist and clamp; phone shortcut parsing rejects
   `javascript:` and other schemes.
@@ -60,7 +65,7 @@ AGP 8.7.3, Kotlin 2.0.21, Android SDK Platform 34 / Build-Tools 34, Robolectric 
   offline display after restart · timeout · reconnect after outage · bad token → unauthorized ·
   public address blocked before any request · connection refused → unreachable · authenticated
   POST commands · backoff · clear cache.
-* **UiFlowTest (12, Robolectric, API 28):** login masking + show/hide · wrong PIN · first login
+* **UiFlowTest (12 × 6 Android versions):** login masking + show/hide · wrong PIN · first login
   → forced PIN change → dashboard · offline dashboard with clock and banner, no fake values ·
   all five tabs · secondary pages + back · settings address validation + persistence ·
   connection test to a dead port shows an error · logout · rotation · live companion data
@@ -85,7 +90,9 @@ request line · peer filter (private allowed, public refused).
 4. **Bridge on Windows with the real companion**: verified on Linux with Windows-only modules
    shimmed in a scratch harness (registry, media session, `C:\` drive). Windows media, GPU (NVML),
    registry CPU name, shortcuts and alert focus need a run on the PC.
-5. **Release APK at runtime**: R8 build succeeds; tests ran against the unshrunk debug build.
+5. **Android 5.0–7.0 HTTPS to weather/GitHub**: these phones may not trust newer certificate
+   authorities; the app then shows "unavailable" for those cards. PC data is unaffected.
+6. **Release APK at runtime**: R8 build succeeds; tests ran against the unshrunk debug build.
    The app uses no reflection, so shrinking risk is low.
 
 ## Suggested device checklist (when the phone is connected)

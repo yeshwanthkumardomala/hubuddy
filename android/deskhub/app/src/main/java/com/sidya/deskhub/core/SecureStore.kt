@@ -3,7 +3,7 @@ package com.sidya.deskhub.core
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import java.security.KeyStore
-import java.util.Base64
+import android.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -16,7 +16,8 @@ interface SecretCipher {
     fun decrypt(blob: String): ByteArray
 }
 
-/** AES-256-GCM with a non-exportable key in AndroidKeyStore (available on Android 6+). */
+/** AES-256-GCM with a non-exportable key in AndroidKeyStore. Requires Android 6 (API 23); see DeskHubApp. */
+@android.annotation.TargetApi(23)
 class KeystoreCipher(private val alias: String = "sidya_deskhub_master") : SecretCipher {
     private fun key(): SecretKey {
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -35,17 +36,15 @@ class KeystoreCipher(private val alias: String = "sidya_deskhub_master") : Secre
     override fun encrypt(plain: ByteArray): String {
         val c = Cipher.getInstance("AES/GCM/NoPadding")
         c.init(Cipher.ENCRYPT_MODE, key())
-        val b64 = Base64.getEncoder()
-        return b64.encodeToString(c.iv) + ":" + b64.encodeToString(c.doFinal(plain))
+        return Base64.encodeToString(c.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(c.doFinal(plain), Base64.NO_WRAP)
     }
 
     override fun decrypt(blob: String): ByteArray {
         val parts = blob.split(":")
         require(parts.size == 2) { "bad blob" }
-        val d = Base64.getDecoder()
         val c = Cipher.getInstance("AES/GCM/NoPadding")
-        c.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, d.decode(parts[0])))
-        return c.doFinal(d.decode(parts[1]))
+        c.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, Base64.decode(parts[0], Base64.NO_WRAP)))
+        return c.doFinal(Base64.decode(parts[1], Base64.NO_WRAP))
     }
 }
 

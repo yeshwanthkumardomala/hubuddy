@@ -1,5 +1,20 @@
 # Release notes
 
+## 1.1.0 — Works on any Android 5.0+ phone (2026-11-23)
+
+* **minSdk lowered from 28 to 21**, so the app installs on Android 5.0 and newer (practically
+  every Android phone in use), not only Android 9+.
+* Portable PBKDF2-HMAC-SHA256 PIN hashing, checked against the RFC 7914 test vector and the
+  JDK implementation. The hash format is now `pbkdf2-sha256$…` (hex).
+* Android 5.x fallback: secrets in memory only when the Keystore has no AES support; a legacy
+  network-type API before Android 6; a non-adaptive launcher icon for Android 5–7.
+* UI tests now run on Android 5.0, 7.0, 8.0, 9, 11 and 14, with an extra Android 5.0/5.1
+  check of the Keystore-less path: 106 tests, all passing.
+* Smaller APKs: debug 956,974 bytes, release 79,355 bytes.
+* Known limit on Android 5.0–7.0: these phones may not trust the certificates of the weather
+  and GitHub services. Those cards then show "unavailable", while everything from the PC works
+  (it uses plain local HTTP).
+
 ## 1.0.0 — Hubuddy DeskHub, SIDYA Edition (2026-11-22)
 
 First release of the Android adaptation of DeskHub for the Vivo 1902 (Android 9, API 28+).

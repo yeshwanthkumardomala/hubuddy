@@ -27,7 +27,7 @@ If PowerShell refuses to run scripts, allow them once with
 
 ```powershell
 cd hubuddy\android\deskhub
-.\gradlew.bat testDebugUnitTest      # unit + Robolectric UI tests (Android 9 / API 28)
+.\gradlew.bat testDebugUnitTest      # unit + Robolectric UI tests (Android 5.0, 5.1, 7.0, 8.0, 9, 11 and 14)
 .\gradlew.bat assembleDebug          # -> app\build\outputs\apk\debug\app-debug.apk
 .\gradlew.bat lintDebug              # -> app\build\reports\lint-results-debug.html
 .\gradlew.bat assembleRelease        # -> app\build\outputs\apk\release\app-release.apk
@@ -39,8 +39,8 @@ On Linux or macOS, use `./gradlew` with the same tasks.
 
 | File | Notes |
 | --- | --- |
-| `android/deskhub/app/build/outputs/apk/debug/app-debug.apk` | Primary deliverable (debug-signed, about 2.6 MB) |
-| `android/deskhub/app/build/outputs/apk/release/app-release.apk` | R8-shrunk (about 140 KB), signed with your local debug key, for sideload testing only |
+| `android/deskhub/app/build/outputs/apk/debug/app-debug.apk` | Primary deliverable (debug-signed, about 0.95 MB) |
+| `android/deskhub/app/build/outputs/apk/release/app-release.apk` | R8-shrunk (about 80 KB), signed with your local debug key, for sideload testing only |
 
 APKs are build outputs and are not committed (see `.gitignore`).
 
