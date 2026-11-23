@@ -137,6 +137,12 @@ A small program runs on each computer and serves its readings; the app pairs wit
 runs commands itself: it asks for a fixed action (media control, a shortcut number, dismiss an alert, send something) and
 that PC decides what it means. Details in the [architecture guide](docs/hubuddy/ARCHITECTURE.md).
 
+## The PC window
+
+<p align="center"><img src="docs/hubuddy/screenshots/pc/window.png" width="360" alt="The Hubuddy window on Windows"></p>
+
+<sub>Taken by CI on a real Windows desktop (light theme; it follows your Windows light/dark setting). With the QR code open it also shows the code inside the window.</sub>
+
 ## Install on the PC
 
 * **Installer (recommended):** run `HubuddySetup-3.4.0.exe`. It adds a Start menu entry, can allow phones through the
