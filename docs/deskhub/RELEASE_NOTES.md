@@ -1,5 +1,21 @@
 # Release notes
 
+## 1.2.0 — Desk mode (2026-11-23)
+
+* **Desk mode:** a DeskHub-style full-screen landscape display (both landscape directions) with a
+  side rail of pages. It starts after the configured idle time (default 5 minutes) while charging,
+  or from the new **Desk** button, and rotates through Clock, PC, Claude, Media, Calendar, Weather,
+  Network and GitHub (default 12 s each, with a progress line). Pages without data are skipped.
+* Drawn gauges (CPU, RAM, GPU, disk, Claude 5-hour and weekly limits), a CPU history chart, a
+  latency chart, 7-day token bars and a GitHub contribution heatmap, all without extra libraries.
+* A new Claude "waiting for permission or input" alert jumps straight to the Claude page.
+* Night hours (default 23:00 to 07:00) or a sleeping PC screen: a dim clock only, lowest
+  brightness. The layout shifts a few pixels each minute against screen burn-in.
+* Read-only and safe: any touch leaves desk mode. It never extends an expired login session, so
+  the PIN is asked again. The screen stays on only while charging unless you allow battery use.
+* Settings → Desk mode: idle minutes, seconds per page, which pages, night hours, battery option, and "Open now".
+* Tests: 147 run (UI tests on Android 5.0–14), all passing.
+
 ## 1.1.0 — Works on any Android 5.0+ phone (2026-11-23)
 
 * **minSdk lowered from 28 to 21**, so the app installs on Android 5.0 and newer (practically

@@ -7,6 +7,7 @@ iPhones and other devices can use the bridge's web dashboard in a browser.
 It is adapted from [DeskHub](https://github.com/zacharyinserra/deskhub) (MIT).
 
 * **App:** [`android/deskhub`](android/deskhub). Native Kotlin, package `com.sidya.deskhub`.
+  Includes a landscape **desk mode** that rotates through the panels when idle.
   PIN-locked dashboard with PC monitor, Claude Code usage and alerts, media and shortcut
   controls, calendar, weather, network and GitHub. Works offline with the last saved data.
 * **PC bridge:** [`companion-bridge`](companion-bridge). Reuses the DeskHub companion and

@@ -79,27 +79,7 @@ class Screenshots {
     }
 
     @Test fun dashboard() {
-        val now = System.currentTimeMillis() / 1000
-        val snapshot = """{"pc":{"online":true,"asleep":false,"hostname":"YESH-LAPTOP"},
-          "stats":{"cpu":34.0,"ram_used":9.6,"ram_total":16.0,"disk":58.0,"net_down":1840.0,"net_up":96.0,"gpu":22,"gpu_temp":54,
-                   "vram_used":1.8,"vram_total":6.0,"cpu_name":"AMD Ryzen 7 5800H","gpu_name":"NVIDIA GeForce RTX 3060 Laptop"},
-          "claude":{"provider":"claude","today":{"tokens":1284000,"output":48200,"messages":214},"last_hour":182000,"last_active":${now - 20},
-                    "limits":{"five_hour":{"pct":46.0,"reset":${now + 2 * 3600 + 900}},"seven_day":{"pct":21.0,"reset":${now + 4 * 86400}},"updated":${now - 30}},
-                    "block":{"active":true,"tokens":612000,"messages":88,"reset":${now + 2 * 3600 + 900}},
-                    "days":[420000,910000,650000,1180000,300000,780000,1284000],"models":[{"name":"Opus","tokens":1010000},{"name":"Sonnet","tokens":274000}]},
-          "alert":{"id":"s1","kind":"permission","title":"Claude needs your permission to use Bash","detail":"npm run build","project":"hubuddy"},
-          "sessions_info":{"sessions":[{"state":"permission","project":"hubuddy","age_s":12},{"state":"running","project":"deskhub-android","age_s":4}]},
-          "media":{"active":true,"playing":true,"title":"Kesariya","artist":"Arijit Singh","album":"Brahmastra","source":"Spotify"},
-          "calendar":{"days":7,"events":[
-             {"title":"Team stand-up","loc":"Google Meet","cal":"Work","start":${now + 3600},"end":${now + 5400},"all_day":false,"color":"#2EC4B6"},
-             {"title":"Hubuddy release review","loc":"","cal":"Personal","start":${now + 26 * 3600},"end":${now + 27 * 3600},"all_day":false,"color":"#8A5A3B"},
-             {"title":"Project submission","loc":"","cal":"College","start":${now + 50 * 3600},"end":${now + 51 * 3600},"all_day":true,"color":"#F4B400"}]},
-          "network":{"online":true,"latency_ms":18.4,"jitter_ms":2.1,"loss_pct":0,"today_bytes":3221225472,"month_bytes":96636764160,
-                     "speed":{"down_mbps":94.2,"up_mbps":41.7,"ping_ms":12.0,"at":${now - 3600}},"testing":false},
-          "shortcuts":{"tiles":[{"id":0,"label":"Lock PC","color":"#3A2A20"},{"id":1,"label":"VS Code","color":"#1E3A4A"},
-             {"id":2,"label":"Mute mic","color":"#2B2F3A"},{"id":3,"label":"Screenshot","color":"#2B2F3A"},
-             {"id":4,"label":"Volume up","color":"#24272B"},{"id":5,"label":"Downloads","color":"#24272B"}],"on":[2]},
-          "github":{"login":"yeshwanthkumardomala","total":412,"today":6,"week":31,"last_week":24,"streak":9,"longest":21}}"""
+        val snapshot = sampleSnapshot()
         val token = "k".repeat(43)
         val server = MiniHttpServer { req ->
             if (req.headers["authorization"] != "Bearer $token") 401 to "{}"
@@ -130,6 +110,33 @@ class Screenshots {
         } finally { server.stop() }
     }
 
+    fun sampleSnapshot(): String {
+        val now = System.currentTimeMillis() / 1000
+        // A year of contribution levels (0-4), deterministic so screenshots are stable.
+        val levels = (0 until 365).joinToString("") { i -> (((i * 7919) % 13 + (i / 30) % 3) % 5).let { if (i % 6 == 0) 0 else it }.toString() }
+        return """{"pc":{"online":true,"asleep":false,"hostname":"YESH-LAPTOP"},
+          "stats":{"cpu":34.0,"ram_used":9.6,"ram_total":16.0,"disk":58.0,"net_down":1840.0,"net_up":96.0,"gpu":22,"gpu_temp":54,
+                   "vram_used":1.8,"vram_total":6.0,"cpu_name":"AMD Ryzen 7 5800H","gpu_name":"NVIDIA GeForce RTX 3060 Laptop"},
+          "claude":{"provider":"claude","today":{"tokens":1284000,"output":48200,"messages":214},"last_hour":182000,"last_active":${now - 20},
+                    "limits":{"five_hour":{"pct":46.0,"reset":${now + 2 * 3600 + 900}},"seven_day":{"pct":21.0,"reset":${now + 4 * 86400}},"updated":${now - 30}},
+                    "block":{"active":true,"tokens":612000,"messages":88,"reset":${now + 2 * 3600 + 900}},
+                    "days":[420000,910000,650000,1180000,300000,780000,1284000],"models":[{"name":"Opus","tokens":1010000},{"name":"Sonnet","tokens":274000}]},
+          "alert":{"id":"s1","kind":"permission","title":"Claude needs your permission to use Bash","detail":"npm run build","project":"hubuddy"},
+          "sessions_info":{"sessions":[{"state":"permission","project":"hubuddy","age_s":12},{"state":"running","project":"deskhub-android","age_s":4}]},
+          "media":{"active":true,"playing":true,"pos":121,"dur":268,"title":"Kesariya","artist":"Arijit Singh","album":"Brahmastra","source":"Spotify"},
+          "calendar":{"days":7,"events":[
+             {"title":"Team stand-up","loc":"Google Meet","cal":"Work","start":${now + 3600},"end":${now + 5400},"all_day":false,"color":"#2EC4B6"},
+             {"title":"Hubuddy release review","loc":"","cal":"Personal","start":${now + 26 * 3600},"end":${now + 27 * 3600},"all_day":false,"color":"#8A5A3B"},
+             {"title":"Project submission","loc":"","cal":"College","start":${now + 50 * 3600},"end":${now + 51 * 3600},"all_day":true,"color":"#F4B400"}]},
+          "network":{"online":true,"latency_ms":18.4,"jitter_ms":2.1,"loss_pct":0,"today_bytes":3221225472,"month_bytes":96636764160,
+                     "hist":[18,17,19,22,18,17,-1,16,18,25,31,22,19,18,17,18,20,19,18,17,16,18,19,21,24,20,18,17,18,19],"speed":{"down_mbps":94.2,"up_mbps":41.7,"ping_ms":12.0,"at":${now - 3600}},"testing":false},
+          "shortcuts":{"tiles":[{"id":0,"label":"Lock PC","color":"#3A2A20"},{"id":1,"label":"VS Code","color":"#1E3A4A"},
+             {"id":2,"label":"Mute mic","color":"#2B2F3A"},{"id":3,"label":"Screenshot","color":"#2B2F3A"},
+             {"id":4,"label":"Volume up","color":"#24272B"},{"id":5,"label":"Downloads","color":"#24272B"}],"on":[2]},
+          "github":{"login":"yeshwanthkumardomala","total":412,"today":6,"week":31,"last_week":24,"streak":9,"longest":21,"levels":"$levels","start_wday":2},
+          "network_extra":null}"""
+    }
+
     private fun injectInternetSamples() {
         val now = System.currentTimeMillis()
         val weather = JSONObject("""{"current_units":{"temperature_2m":"°C","wind_speed_10m":"km/h"},
@@ -142,6 +149,49 @@ class Screenshots {
         val f = repo.javaClass.getDeclaredField("state").apply { isAccessible = true }
         val s = f.get(repo) as DashState
         f.set(repo, s.copy(weather = weather, weatherAt = now, weatherError = null, github = github, githubAt = now, githubError = null))
+    }
+
+    private fun <T> withSampleCompanion(block: () -> T): T {
+        val token = "k".repeat(43)
+        val snap = sampleSnapshot()
+        val server = MiniHttpServer { req ->
+            if (req.headers["authorization"] != "Bearer $token") 401 to "{}"
+            else if (req.path == "/api/snapshot") 200 to snap else 200 to """{"ok":true}"""
+        }.start()
+        try {
+            val a = app()
+            a.settings.usbPort = server.port
+            a.settings.weatherName = "Hyderabad, IN"; a.settings.weatherLat = 17.38; a.settings.weatherLon = 78.49
+            a.settings.nightEnabled = false
+            a.secrets.put(com.sidya.deskhub.net.CompanionLink.TOKEN, token)
+            a.auth.login("123456789", "123456"); a.auth.changePin("123456", "482916", "482916")
+            return block()
+        } finally { server.stop() }
+    }
+
+    /** Desk mode at the Vivo 1902's landscape size (1544 x 720 px). */
+    @Test @Config(qualifiers = "w772dp-h360dp-land-xhdpi") fun deskMode() = withSampleCompanion {
+        val d = Robolectric.buildActivity(com.sidya.deskhub.ui.desk.DeskActivity::class.java).setup().get()
+        val end = System.currentTimeMillis() + 8000
+        while (!app().repo.state.online && System.currentTimeMillis() < end) idle(50)
+        idle(1500); injectInternetSamples()
+        // The alert in the sample data makes desk mode jump to Claude first; walk the whole rotation from there.
+        val seen = LinkedHashSet<String>()
+        repeat(9) {
+            idle(500) // let the fade-in finish
+            val title = d.window.decorView.findViewWithTag<android.widget.TextView>("desk_title").text.toString().lowercase()
+            if (seen.add(title)) shot(d, "desk-%02d-%s".format(seen.size, title))
+            d.next()
+        }
+    }
+
+    @Test @Config(qualifiers = "w772dp-h360dp-land-xhdpi") fun deskNight() = withSampleCompanion {
+        app().settings.nightEnabled = true; app().settings.nightStart = 0; app().settings.nightEnd = 1439
+        val d = Robolectric.buildActivity(com.sidya.deskhub.ui.desk.DeskActivity::class.java).setup().get()
+        val end = System.currentTimeMillis() + 8000
+        while (!app().repo.state.online && System.currentTimeMillis() < end) idle(50)
+        idle(1500)
+        shot(d, "desk-99-night")
     }
 
     @Test @Config(qualifiers = "w760dp-h360dp-land-xhdpi") fun landscape() {

@@ -17,6 +17,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.sidya.deskhub.DeskHubApp
 import com.sidya.deskhub.data.DashState
+import com.sidya.deskhub.ui.desk.DeskActivity
 import com.sidya.deskhub.ui.screens.AiScreen
 import com.sidya.deskhub.ui.screens.ControlsScreen
 import com.sidya.deskhub.ui.screens.HomeScreen
@@ -40,6 +41,8 @@ class MainActivity : Activity() {
     private val stack = ArrayList<Screen>()
     private var tab = 0
     private var resumed = false
+    /** Last time the user touched the screen; desk mode starts after the configured idle time. */
+    var lastTouchAt = System.currentTimeMillis()
     private val listener: (DashState) -> Unit = { onState(it) }
 
     val tabNames = listOf("Home", "Monitor", "AI", "Controls", "Settings")
@@ -48,7 +51,9 @@ class MainActivity : Activity() {
         override fun run() {
             if (!resumed) return
             if (!app.auth.canAccessDashboard()) { toLogin("Session expired. Please log in again."); return }
+            if (shouldStartDesk(System.currentTimeMillis())) { openDesk(); return }
             current()?.tick()
+            if (System.currentTimeMillis() % 30_000 < 1000) updateKeepAwake()
             handler.postDelayed(this, 1000)
         }
     }
@@ -73,6 +78,12 @@ class MainActivity : Activity() {
                     addView(ui.text("Hubuddy DeskHub", 16f, Pal.text, bold = true))
                     addView(ui.text("SIDYA EDITION", 9f, Pal.walnut, bold = true).apply { letterSpacing = 0.2f })
                 }, ui.lp(0, -2, 1f))
+                addView(ui.text("Desk", 12f, Pal.accent, bold = true, tag = "deskButton").apply {
+                    background = ui.rounded(Pal.surface2, 10)
+                    setPadding(ui.dp(12), ui.dp(6), ui.dp(12), ui.dp(6))
+                    isClickable = true
+                    setOnClickListener { openDesk() }
+                }, ui.lp(-2, -2).apply { rightMargin = ui.dp(10) })
                 statusDot = ui.dot(Pal.dim)
                 addView(statusDot)
                 statusText = ui.text("…", 12f, Pal.dim, tag = "statusText")
@@ -194,8 +205,8 @@ class MainActivity : Activity() {
         super.onResume()
         if (!app.auth.canAccessDashboard()) { toLogin(null); return }
         resumed = true
-        if (app.settings.keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        lastTouchAt = System.currentTimeMillis()
+        updateKeepAwake()
         app.repo.addListener(listener)
         app.repo.start()
         handler.removeCallbacks(ticker)
@@ -214,7 +225,29 @@ class MainActivity : Activity() {
 
     override fun onUserInteraction() {
         super.onUserInteraction()
+        lastTouchAt = System.currentTimeMillis()
         app.auth.touch()
+    }
+
+    /** Idle long enough, and the screen can stay on (charging, or allowed on battery). */
+    fun shouldStartDesk(now: Long): Boolean {
+        val idleMin = app.settings.deskIdleMin
+        if (idleMin <= 0) return false
+        if (!(DeskActivity.isCharging(this) || app.settings.deskOnBattery)) return false
+        return now - lastTouchAt >= idleMin * 60_000L
+    }
+
+    fun openDesk() {
+        lastTouchAt = System.currentTimeMillis()
+        startActivity(Intent(this, DeskActivity::class.java))
+    }
+
+    /** Keep the screen awake when asked to, or so the desk-mode idle timer can run out. */
+    private fun updateKeepAwake() {
+        val s = app.settings
+        val deskWaiting = s.deskIdleMin > 0 && (DeskActivity.isCharging(this) || s.deskOnBattery)
+        if (s.keepScreenOn || deskWaiting) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     @Deprecated("Activity API on Android 9")

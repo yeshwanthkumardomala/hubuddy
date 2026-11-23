@@ -176,6 +176,58 @@ class SettingsScreen(host: MainActivity) : Screen(host) {
             addView(ui.button("Save", primary = false) { cfg.localShortcuts = box.text.toString(); host.toast("Saved.") })
         })
 
+        // ---- Desk mode -------------------------------------------------------------
+        addView(ui.card("Desk mode") {
+            addView(ui.text("A full-screen landscape display that rotates through the pages below. It starts by itself when the phone is idle and charging; touch the screen to leave.", 12f, Pal.dim), ui.lp(bottom = 6))
+            val idle = ui.input("Minutes", "deskIdle", InputType.TYPE_CLASS_NUMBER, cfg.deskIdleMin.toString())
+            val secs = ui.input("Seconds", "deskSecs", InputType.TYPE_CLASS_NUMBER, cfg.deskPanelSec.toString())
+            addView(ui.text("Start after no touch for (minutes, 0 = only with the Desk button)", 12f, Pal.dim)); addView(idle, ui.lp(bottom = 6))
+            addView(ui.text("Seconds per page (4-300)", 12f, Pal.dim)); addView(secs, ui.lp(bottom = 6))
+            addView(ui.text("Pages", 12f, Pal.dim))
+            val chosen = cfg.deskPanels.toSet()
+            val boxes = com.sidya.deskhub.core.DESK_PANELS.map { id ->
+                check(id.replaceFirstChar { it.uppercase() }, id in chosen, "desk_$id").also { addView(it) }
+            }
+            val battery = check("Also keep the screen on when not charging", cfg.deskOnBattery, "deskBattery")
+            val nightOn = check("Night: dim clock only", cfg.nightEnabled, "nightOn")
+            addView(battery); addView(nightOn)
+            fun hhmm(m: Int) = "%02d:%02d".format(m / 60, m % 60)
+            val nStart = ui.input("23:00", "nightStart", InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME, hhmm(cfg.nightStart))
+            val nEnd = ui.input("07:00", "nightEnd", InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME, hhmm(cfg.nightEnd))
+            addView(ui.hbox {
+                addView(nStart, ui.lp(0, -2, 1f).apply { rightMargin = ui.dp(6) })
+                addView(ui.text("to", 13f, Pal.dim), ui.lp(-2, -2).apply { rightMargin = ui.dp(6) })
+                addView(nEnd, ui.lp(0, -2, 1f))
+            }, ui.lp(top = 4, bottom = 6))
+            val dm = ui.text("", 12f, Pal.dim, tag = "deskMessage")
+            fun parse(t: String): Int? {
+                val m = Regex("^(\\d{1,2}):(\\d{2})$").find(t.trim()) ?: return null
+                val h = m.groupValues[1].toInt(); val mi = m.groupValues[2].toInt()
+                return if (h in 0..23 && mi in 0..59) h * 60 + mi else null
+            }
+            addView(ui.hbox {
+                addView(ui.button("Save", tag = "saveDesk") {
+                    val i = idle.text.toString().toIntOrNull(); val sec = secs.text.toString().toIntOrNull()
+                    val a = parse(nStart.text.toString()); val b = parse(nEnd.text.toString())
+                    val pages = com.sidya.deskhub.core.DESK_PANELS.filterIndexed { k, _ -> boxes[k].isChecked }
+                    when {
+                        i == null || sec == null -> { dm.setTextColor(Pal.bad); dm.text = "Enter whole numbers." }
+                        a == null || b == null -> { dm.setTextColor(Pal.bad); dm.text = "Night times must look like 23:00." }
+                        pages.isEmpty() -> { dm.setTextColor(Pal.bad); dm.text = "Choose at least one page." }
+                        else -> {
+                            cfg.deskIdleMin = i; cfg.deskPanelSec = sec; cfg.deskPanels = pages
+                            cfg.deskOnBattery = battery.isChecked; cfg.nightEnabled = nightOn.isChecked
+                            cfg.nightStart = a; cfg.nightEnd = b
+                            idle.setText(cfg.deskIdleMin.toString()); secs.setText(cfg.deskPanelSec.toString())
+                            dm.setTextColor(Pal.ok); dm.text = "Saved."
+                        }
+                    }
+                }, ui.lp(0, -2, 1f).apply { rightMargin = ui.dp(6) })
+                addView(ui.button("Open now", primary = false, tag = "openDesk") { host.openDesk() }, ui.lp(0, -2, 1f))
+            })
+            addView(dm)
+        })
+
         // ---- Theme ---------------------------------------------------------------
         addView(ui.card("Theme") {
             addView(ui.hbox {

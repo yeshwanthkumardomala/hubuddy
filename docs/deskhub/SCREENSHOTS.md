@@ -15,6 +15,19 @@ a physical phone. To regenerate them:
 ![Landscape](screenshots/phone/13-landscape-monitor-offline.png)
 Landscape (two columns)
 
+## Desk mode (phone standing beside your PC, landscape)
+
+Starts by itself after 5 minutes without a touch while the phone is charging, or with the **Desk**
+button. It shows the clock, then each page in turn (every 12 s by default), skipping pages that have no
+data. A new Claude "waiting for permission" alert jumps straight to its page. At night, or while the
+PC's screen sleeps, only a dim clock stays on. Touch anywhere to leave.
+
+| | | |
+| --- | --- | --- |
+| ![Clock](screenshots/phone/desk-07-clock.png) Clock | ![PC](screenshots/phone/desk-08-pc.png) PC | ![Claude](screenshots/phone/desk-01-claude.png) Claude Code |
+| ![Media](screenshots/phone/desk-02-media.png) Media | ![Calendar](screenshots/phone/desk-03-calendar.png) Calendar | ![Weather](screenshots/phone/desk-04-weather.png) Weather |
+| ![Network](screenshots/phone/desk-05-network.png) Network | ![GitHub](screenshots/phone/desk-06-github.png) GitHub | ![Night](screenshots/phone/desk-99-night.png) Night |
+
 **Laptop side:** the bridge console (real output; two lines that only appear on Linux were
 removed) and the optional web dashboard in Chromium.
 

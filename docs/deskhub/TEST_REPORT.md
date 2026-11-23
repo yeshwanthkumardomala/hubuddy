@@ -1,4 +1,4 @@
-# Test report — Hubuddy DeskHub 1.1.0
+# Test report — Hubuddy DeskHub 1.2.0
 
 Date: 2026-11-23 · Environment: Linux build container (cloud), OpenJDK 21, Gradle 8.14.3,
 AGP 8.7.3, Kotlin 2.0.21, Android SDK Platform 34 / Build-Tools 34, Robolectric 4.14.1, Python 3.13.
@@ -14,7 +14,7 @@ AGP 8.7.3, Kotlin 2.0.21, Android SDK Platform 34 / Build-Tools 34, Robolectric 
 | Suite | Result |
 | --- | --- |
 | Compilation (`assembleDebug`, `assembleRelease`) | ✅ BUILD SUCCESSFUL |
-| Android unit + Robolectric UI tests (`testDebugUnitTest`) | ✅ **106 passed, 0 failed, 0 skipped** |
+| Android unit + Robolectric UI tests (`testDebugUnitTest`) | ✅ **147 run, 0 failed, 0 skipped** (includes 7 screenshot runs and 34 desk-mode runs) |
 | Android version coverage (UI tests) | ✅ API 21 (13 tests), 22 (1), 24, 26, 28, 30, 34 (12 each): all passed |
 | Android Lint (`lintDebug`, includes manifest checks) | ✅ 0 errors; `NewApi` clean for minSdk 21. 2 expected warnings: `InsecureBaseConfiguration` (cleartext HTTP to the LAN companion, by design and restricted in code) and `UnusedAttribute` (`networkSecurityConfig` is ignored below Android 7, which allows that traffic anyway) |
 | APK inspection (`aapt2 dump badging`) | ✅ package `com.sidya.deskhub`, minSdk **21**, targetSdk 34, permissions INTERNET + ACCESS_NETWORK_STATE only, no native code |
@@ -79,6 +79,15 @@ bad-token rate limit (429) · command validation (bad verbs, out-of-range or wro
 rejected; only valid commands reach DeskHub) · malformed JSON / non-object / oversize body ·
 revoke · static web dashboard served with security headers · path traversal blocked · garbage
 request line · peer filter (private allowed, public refused).
+
+## Desk mode tests (DeskModeTest, on Android 5.0, 9 and 14)
+
+Starts after the idle time only while charging (or when allowed on battery) · Desk button · offline
+shows only the clock · rotation visits every page with data and draws the heatmap · advances after
+the configured seconds · a Claude permission alert jumps to the Claude page · night shows a dim
+clock only at minimum brightness · touch leaves and keeps a valid session · an expired session
+needs the PIN again · malformed data never crashes it · night hours wrap midnight, settings clamp.
+Not covered: real screen-off behaviour, real battery and charger events, and how it looks on a real phone.
 
 ## Not run / pending
 

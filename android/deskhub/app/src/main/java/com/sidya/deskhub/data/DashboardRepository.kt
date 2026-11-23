@@ -37,6 +37,8 @@ data class DashState(
     val github: JSONObject? = null,
     val githubAt: Long = 0,
     val githubError: String? = null,
+    /** CPU % of recent successful polls, oldest first (for the desk-mode chart). */
+    val cpuHistory: List<Double> = emptyList(),
 ) {
     fun section(name: String): JSONObject? = snapshot?.optJSONObject(name)
 }
@@ -119,8 +121,10 @@ class DashboardRepository(
                 when (val r = companion.get("/api/snapshot")) {
                     is ApiResult.Ok -> {
                         val now = clock.now()
+                        val cpu = r.json.optJSONObject("stats")?.optDouble("cpu")?.takeIf { v -> !v.isNaN() }
                         update {
-                            it.copy(online = true, connecting = false, snapshot = r.json, snapshotAt = now, fromCache = false,
+                            it.copy(cpuHistory = if (cpu == null) it.cpuHistory else (it.cpuHistory + cpu).takeLast(HISTORY),
+                                online = true, connecting = false, snapshot = r.json, snapshotAt = now, fromCache = false,
                                 error = null, errorKind = null, latencyMs = r.latencyMs, failures = 0, nextRetryAt = 0)
                         }
                         maybeWriteCache(r.json, now)
@@ -286,6 +290,7 @@ class DashboardRepository(
 
     companion object {
         const val GITHUB_TOKEN = "github.token"
+        const val HISTORY = 60
         const val WEATHER_EVERY_MS = 30 * 60_000L
         const val GITHUB_EVERY_MS = 30 * 60_000L
 

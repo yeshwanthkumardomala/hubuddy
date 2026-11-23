@@ -231,8 +231,8 @@ class UiFlowTest {
         "media":{"active":true,"playing":true,"title":"Song","artist":"Band"},
         "shortcuts":{"tiles":[{"id":0,"label":"Lock PC","color":"#2b2f3a"}],"on":[]},
         "calendar":{"events":[],"days":7}}""") { m ->
-        waitFor(8000) { app().repo.state.online }
-        shadowOf(Looper.getMainLooper()).idle()
+        // Wait for the UI (not just the data layer) to show the update: it is posted to the main thread.
+        waitFor(8000) { m.byTag<TextView>("statusText")!!.text.contains("PC online") }
         val home = allText(m.window.decorView)
         assertTrue(home, home.contains("37%"))
         assertTrue(home.contains("Waiting for permission"))
