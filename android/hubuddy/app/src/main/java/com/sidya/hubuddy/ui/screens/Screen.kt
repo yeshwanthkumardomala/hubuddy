@@ -18,6 +18,9 @@ abstract class Screen(val host: MainActivity) {
 
     abstract fun render(s: DashState): View
 
+    /** Called when the screen is left, covered or the app is paused. */
+    open fun onLeave() {}
+
     /** Called every second while visible. */
     open fun tick() {}
 

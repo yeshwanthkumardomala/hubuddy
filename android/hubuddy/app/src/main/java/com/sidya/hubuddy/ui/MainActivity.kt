@@ -204,6 +204,7 @@ class MainActivity : Activity() {
     fun openTab(i: Int) {
         tab = i.coerceIn(0, 4)
         app.settings.lastTab = tab
+        stack.forEach { it.onLeave() }
         stack.clear()
         stack.add(when (tab) {
             0 -> HomeScreen(this)
@@ -335,6 +336,7 @@ class MainActivity : Activity() {
 
     override fun onPause() {
         resumed = false
+        stack.forEach { it.onLeave() }   // e.g. the touchpad lets go of held mouse buttons
         handler.removeCallbacks(ticker)
         if (::ui.isInitialized) {
             app.repo.removeListener(listener)
@@ -373,7 +375,7 @@ class MainActivity : Activity() {
     @Deprecated("Activity API on Android 9")
     override fun onBackPressed() {
         when {
-            stack.size > 1 -> { stack.removeAt(stack.size - 1); render(resetScroll = true) }
+            stack.size > 1 -> { stack.removeAt(stack.size - 1).onLeave(); render(resetScroll = true) }
             tab != 0 -> openTab(0)
             else -> super.onBackPressed()
         }

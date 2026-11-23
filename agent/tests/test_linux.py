@@ -48,21 +48,30 @@ class LinuxRemote(unittest.TestCase):
 
     def test_every_action_is_a_fixed_argument_list(self):
         be, run = self.backend("xdotool", "systemctl", "shutdown")
-        be.move(5, -3); be.click("right", True); be.scroll(40); be.scroll(-3); be.key("enter", ["ctrl", "shift"]); be.text("a b; $(reboot)")
+        be.move(5, -3); be.click("right", True); be.scroll(0, 130); be.scroll(0, -3); be.key("enter", ["ctrl", "shift"]); be.text("a b; $(reboot)")
         be.power("sleep"); be.power("shutdown"); be.power("abort")
         cmds = [c for c, _ in run.cmds]
         self.assertEqual(cmds[0], ["xdotool", "mousemove_relative", "--", "5", "-3"])
         self.assertEqual(cmds[1][-1], "3"); self.assertIn("--repeat", cmds[1])
-        self.assertEqual(cmds[2][-1], "5"); self.assertEqual(cmds[3][-1], "4")
-        self.assertEqual(cmds[4][-1], "ctrl+shift+Return")
-        self.assertEqual(cmds[5][-2:], ["--", "a b; $(reboot)"])  # typed as text, not interpreted
-        self.assertEqual(cmds[6], ["systemctl", "suspend"])
-        self.assertTrue(cmds[7][0].endswith("shutdown") and "-h" in cmds[7])
-        self.assertTrue(cmds[8][-1] == "-c")
+        self.assertEqual(cmds[2], ["xdotool", "click", "--repeat", "2", "4"])   # 130 units = 2 notches up; the -3 left over stays pending
+        self.assertEqual(cmds[3][-1], "ctrl+shift+Return")                      # (-3 + 10 is still under a notch: nothing sent)
+        self.assertEqual(cmds[4][-2:], ["--", "a b; $(reboot)"])  # typed as text, not interpreted
+        self.assertEqual(cmds[5], ["systemctl", "suspend"])
+        self.assertTrue(cmds[6][0].endswith("shutdown") and "-h" in cmds[6])
+        self.assertTrue(cmds[7][-1] == "-c")
         for argv in cmds:
             self.assertIsInstance(argv, list)
         for _, kw in run.cmds:
             self.assertNotIn("shell", kw)
+
+    def test_buttons_zoom_and_horizontal_scroll(self):
+        be, run = self.backend("xdotool")
+        be.button("left", True); be.button("left", False); be.zoom(3); be.zoom(-2); be.scroll(130, 0); be.scroll(-130, 0)
+        self.assertEqual([c for c, _ in run.cmds], [
+            ["xdotool", "mousedown", "1"], ["xdotool", "mouseup", "1"],
+            ["xdotool", "keydown", "ctrl", "click", "--repeat", "3", "4", "keyup", "ctrl"],
+            ["xdotool", "keydown", "ctrl", "click", "--repeat", "2", "5", "keyup", "ctrl"],
+            ["xdotool", "click", "--repeat", "2", "6"], ["xdotool", "click", "--repeat", "2", "7"]])
 
     def test_missing_tools_are_reported_not_faked(self):
         be, _ = self.backend()

@@ -33,7 +33,7 @@ def allow_through_firewall(tcp_port: int, udp_port: int) -> bool:
     exe = sys.executable if getattr(sys, "frozen", False) else None
     try:
         r = subprocess.run(["powershell", "-NoProfile", "-Command", elevated_script(firewall_commands(tcp_port, udp_port, exe))],
-                           capture_output=True, timeout=120)
+                           capture_output=True, timeout=120, creationflags=0x08000000)   # no console window flashing up
         return r.returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False

@@ -92,7 +92,7 @@ class MultiPcUiTest {
     @Volatile private var up = HashMap<Int, Boolean>()
 
     @Before fun setUp() {
-        HubuddyApp.cipherOverride = TestCipher()
+        HubuddyApp.cipherOverride = TestCipher(); HubuddyApp.lockOverride = true
         app().auth.login(BOOT_LOGIN, BOOT_PIN); app().auth.changePin(BOOT_PIN, "482916", "482916")
         app().settings.theme = "dark"
     }

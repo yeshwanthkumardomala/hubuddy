@@ -1,4 +1,4 @@
-# Test report — Hubuddy 3.2.0
+# Test report — Hubuddy 3.3.0
 
 Date: 2026-11-23. Environments: Linux build container (OpenJDK 21, Gradle 8.14, AGP 8.7, Kotlin 2.0, Android SDK Platform 34,
 Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Python 3.12) for the PC program.
@@ -36,6 +36,18 @@ Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Py
 * **Discovery:** only the exact probe is answered, replies are rate limited and carry no secret; the app ignores malformed or
   non-local replies; address changes are followed by host id.
 * **QR:** a real invitation-sized QR is decoded from a synthetic camera frame; blank frames decode to nothing.
+
+## Added in 3.3.0 (trackpad, no sign-in, Windows window)
+
+* **Gesture engine (17 tests incl. the sender):** one-finger move, tap versus long press versus slop, two-finger tap is a right click, slide scrolls without clicking or zooming,
+  pinch out and in zoom in opposite directions, three fingers do nothing, a cancelled touch never clicks, no click or scroll while dragging, staggered finger events get a moment to catch up.
+  A real tap and drag on the touchpad view reach the PC as a click, movement and a held button (Android UI test).
+* **Ordered sender:** movement merges while a request is in flight, fractions are carried, events stay in order, a heartbeat flows only while a button is held and the final release is sent
+  on close, 403 stops everything and is reported at once, repeated errors are reported rarely.
+* **PC side:** press/hold buttons are tracked per phone and released by `release`, by 2 seconds of silence, when remote control is turned off and when a phone is forgotten; zoom is ignored while a button is held;
+  letters and digits work in shortcuts; Linux `xdotool` argument lists for buttons, zoom and horizontal scroll are checked.
+* **No sign-in:** the app starts straight at the dashboard; the optional lock refuses weak and mismatched PINs, locks again after `Lock now`, and unlocks only with the right PIN (4 tests).
+* **Windows window:** its code runs against a stand-in for Tk (6 tests: QR and PIN, one countdown, copy invitation, paired phone appears, remote switch with confirmation, forget, close prompt, off-Windows firewall/autostart). It has **not** been drawn on a real screen.
 
 ## Added in 3.2.0 (Linux)
 

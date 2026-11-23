@@ -51,7 +51,7 @@ class UiFlowTest {
     private val controllers = ArrayList<ActivityController<*>>()
 
     companion object {
-        @JvmStatic @BeforeClass fun cipher() { HubuddyApp.cipherOverride = TestCipher() }
+        @JvmStatic @BeforeClass fun cipher() { HubuddyApp.cipherOverride = TestCipher(); HubuddyApp.lockOverride = true }
     }
 
     @After fun tearDown() { controllers.forEach { runCatching { it.pause().stop().destroy() } } }
@@ -225,6 +225,18 @@ class UiFlowTest {
             allowedFlag.set(true)
             m.byTag<View>("remoteCheck")!!.performClick()
             waitFor(5000) { m.byTag<View>("touchpad") != null }
+            // a real tap on the touchpad becomes a click on the PC, and a drag becomes pointer movement
+            val pad = m.byTag<View>("touchpad")!!
+            val t0 = android.os.SystemClock.uptimeMillis()
+            pad.dispatchTouchEvent(android.view.MotionEvent.obtain(t0, t0, android.view.MotionEvent.ACTION_DOWN, 40f, 40f, 0))
+            pad.dispatchTouchEvent(android.view.MotionEvent.obtain(t0, t0 + 60, android.view.MotionEvent.ACTION_UP, 40f, 40f, 0))
+            waitFor(5000) { inputs.any { it.contains("\"click\"") && it.contains("left") } }
+            pad.dispatchTouchEvent(android.view.MotionEvent.obtain(t0, t0 + 400, android.view.MotionEvent.ACTION_DOWN, 40f, 40f, 0))
+            pad.dispatchTouchEvent(android.view.MotionEvent.obtain(t0, t0 + 420, android.view.MotionEvent.ACTION_MOVE, 120f, 90f, 0))
+            pad.dispatchTouchEvent(android.view.MotionEvent.obtain(t0, t0 + 440, android.view.MotionEvent.ACTION_UP, 120f, 90f, 0))
+            waitFor(5000) { inputs.any { it.contains("\"move\"") } }
+            m.byTag<View>("dragToggle")!!.performClick()
+            waitFor(5000) { inputs.any { it.contains("\"button\"") && it.contains("true") } }
             m.byTag<EditText>("remoteText")!!.setText("hello")
             m.byTag<View>("typeText")!!.performClick()
             waitFor(5000) { inputs.any { it.contains("hello") } }

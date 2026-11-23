@@ -18,6 +18,11 @@ class Settings(private val kv: KeyValue) {
         }
         set(v) = kv.putString("cfg.theme", if (v in listOf("dark", "black", "light", "auto")) v else "dark")
 
+    /** Touchpad pointer speed, 0.5 to 3.0 (1.5 is the default). */
+    var remoteSpeed: Float
+        get() = (kv.getString("cfg.remoteSpeed")?.toFloatOrNull() ?: 1.5f).coerceIn(0.5f, 3f)
+        set(v) = kv.putString("cfg.remoteSpeed", v.coerceIn(0.5f, 3f).toString())
+
     /** Show the last saved dashboard when the agent is offline. */
     var showCachedOffline: Boolean
         get() = kv.getBoolean("cfg.showCached", true)

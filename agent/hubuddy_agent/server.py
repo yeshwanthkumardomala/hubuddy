@@ -94,7 +94,11 @@ class AgentServer:
                  web_dir: pathlib.Path | None = None, clock=time.monotonic):
         self.source, self.svc = source, services
         self.lan_host, self.port, self.local_port = lan_host, port, local_port
+        self.rc_limit = 40  # remote requests per second per phone (a touchpad sends about 16)
         self._rc_rate: dict = {}
+        self._rc_held: dict[str, set] = {}   # mouse buttons a phone is holding down
+        self._rc_last: dict[str, float] = {}
+        self._watchdog = None
         self.web_dir = pathlib.Path(web_dir).resolve() if web_dir else None
         self.clock = clock
         self.host_ok = make_host_check(services.name, tls_name=services.tls.name)
@@ -107,11 +111,14 @@ class AgentServer:
         lan = await asyncio.start_server(lambda r, w: self._connection(r, w, local=False), self.lan_host, self.port,
                                          ssl=self.svc.tls.context, ssl_handshake_timeout=10)
         self.port = lan.sockets[0].getsockname()[1]
+        self._watchdog = asyncio.get_running_loop().create_task(self._watch_buttons())
         local = await asyncio.start_server(lambda r, w: self._connection(r, w, local=True), "127.0.0.1", self.local_port)
         self.local_port = local.sockets[0].getsockname()[1]
         self._servers = [lan, local]
 
     async def close(self):
+        if self._watchdog:
+            self._watchdog.cancel()
         for s in self._servers:
             s.close()
         for s in self._servers:
@@ -390,6 +397,23 @@ class AgentServer:
         svc.activity.record("phone_paired", phone=entry["name"], method=method, peer=req.peer)
         return Response(200, {"ok": True, "hostId": svc.host_id, "token": token})
 
+    def _release(self, sid: str) -> None:
+        """Lets go of every mouse button this phone is holding. Never leaves a button stuck if the phone goes away."""
+        for b in list(self._rc_held.get(sid, ())):
+            try:
+                self.svc.remote.button(b, False)
+            except Exception:
+                pass
+        self._rc_held.pop(sid, None)
+
+    async def _watch_buttons(self):
+        while True:
+            await asyncio.sleep(0.5)
+            now = self.clock()
+            for sid in [k for k, v in self._rc_held.items() if v]:
+                if now - self._rc_last.get(sid, 0) > 2.0:   # the phone sends a heartbeat while it holds a button
+                    self._release(sid)
+
     async def _remote(self, req: Request, p: str, sid: str) -> Response:
         """Mouse, keyboard, volume, power and task manager. Off for every phone until the PC's owner switches it on."""
         svc, be = self.svc, self.svc.remote
@@ -401,21 +425,33 @@ class AgentServer:
         now = self.clock()
         window = self._rc_rate.setdefault(sid, [])
         window[:] = [t for t in window if now - t < 1.0]
-        if len(window) >= 20:
+        if len(window) >= self.rc_limit:
             raise HttpError(429, "too many remote actions per second")
         window.append(now)
         name = self._phone_name(req)
+        self._rc_last[sid] = now
         try:
             if p == "/api/input":
                 self._method(req, "POST")
                 events = rc.validate_events((await req.json(32768)).get("events"))
+                self._rc_last[sid] = now
                 for e in events:
                     t = e["t"]
                     if t == "move": be.move(e["dx"], e["dy"])
                     elif t == "click": be.click(e["button"], e["double"])
-                    elif t == "scroll": be.scroll(e["dy"])
+                    elif t == "scroll": be.scroll(e["dx"], e["dy"])
+                    elif t == "zoom":
+                        if not self._rc_held.get(sid):
+                            be.zoom(e["steps"])
+                    elif t == "button":
+                        held = self._rc_held.setdefault(sid, set())
+                        if e["down"] != (e["button"] in held):
+                            be.button(e["button"], e["down"])
+                            (held.add if e["down"] else held.discard)(e["button"])
+                    elif t == "release":
+                        self._release(sid)
                     elif t == "key": be.key(e["key"], e["mods"])
-                    else: be.text(e["text"])
+                    elif t == "text": be.text(e["text"])
                 if any(e["t"] in ("key", "text") for e in events):
                     svc.activity.record("remote_input", phone=name, events=len(events))
                 return ok(count=len(events))
@@ -517,6 +553,8 @@ class AgentServer:
             sid = (await req.json()).get("id")
             gone = svc.sessions.revoke(sid) if isinstance(sid, str) else False
             if gone:
+                self._release(sid)
+            if gone:
                 svc.status.forget(sid)
                 svc.activity.record("phone_forgotten", id=sid)
             return ok(removed=gone)
@@ -526,12 +564,16 @@ class AgentServer:
             if not isinstance(sid, str) or not isinstance(on, bool):
                 raise HttpError(400, "id and on (true or false) required")
             changed = svc.sessions.set_remote(sid, on)
+            if not on:
+                self._release(sid)
             if changed:
                 svc.activity.record("remote_allowed" if on else "remote_blocked", id=sid)
             return ok(changed=changed)
         if p == "/local/forget-all" and m == "POST":
             if (await req.json()).get("confirm") != "forget-all":
                 raise HttpError(400, "confirm forgetting all phones")
+            for k in list(self._rc_held):
+                self._release(k)
             svc.sessions.revoke_all()
             svc.pairing.cancel()
             svc.activity.record("all_phones_forgotten")

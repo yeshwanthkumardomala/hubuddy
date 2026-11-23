@@ -33,7 +33,7 @@ class DockModeTest {
     private val token = "k".repeat(43)
 
     @Before fun setUp() {
-        HubuddyApp.cipherOverride = TestCipher()
+        HubuddyApp.cipherOverride = TestCipher(); HubuddyApp.lockOverride = true
         app().settings.nightEnabled = false
         app().auth.login(BOOT_LOGIN, BOOT_PIN); app().auth.changePin(BOOT_PIN, "482916", "482916")
     }

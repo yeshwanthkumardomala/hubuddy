@@ -7,7 +7,7 @@ import java.security.MessageDigest
 import java.security.SecureRandom
 
 /**
- * Local app lock: login number + PIN, hashed with PBKDF2, failed-attempt lockout,
+ * Optional local app lock (off by default: the app opens straight to the dashboard). When switched on in Settings it is: login number + PIN, hashed with PBKDF2, failed-attempt lockout,
  * mandatory change of the temporary bootstrap PIN, and an inactivity session timeout.
  *
  * This protects the phone UI only. The PC agent has its own pairing token
@@ -44,6 +44,11 @@ class AuthManager(
             kv.putBoolean(K_MUST_CHANGE, true)
         }
     }
+
+    /** The app lock is off until the user switches it on in Settings; while off, nothing asks for a login. */
+    var lockEnabled: Boolean
+        get() = kv.getBoolean(K_LOCK_ON, false)
+        set(v) = kv.putBoolean(K_LOCK_ON, v)
 
     var sessionTimeoutMin: Int
         get() = kv.getInt(K_TIMEOUT, DEFAULT_TIMEOUT_MIN).coerceIn(1, 240)
@@ -102,6 +107,7 @@ class AuthManager(
 
     /** Logged in and not idle too long (may still need the PIN change). */
     fun hasSession(): Boolean {
+        if (!lockEnabled) return true
         val id = secrets.get(S_SESSION) ?: return false
         if (id.isEmpty()) return false
         val last = kv.getLong(K_LAST_ACTIVE, 0)
@@ -110,10 +116,11 @@ class AuthManager(
         return now - last < sessionTimeoutMin * 60_000L
     }
 
-    fun canAccessDashboard(): Boolean = hasSession() && !mustChangePin
+    fun canAccessDashboard(): Boolean = !lockEnabled || (hasSession() && !mustChangePin)
 
     /** Record activity; writes are throttled to keep flash wear low. */
     fun touch(force: Boolean = false) {
+        if (!lockEnabled) return
         if (!force && !hasSession()) return
         val now = clock.now()
         if (force || now - kv.getLong(K_LAST_ACTIVE, 0) > 10_000) kv.putLong(K_LAST_ACTIVE, now)
@@ -122,6 +129,27 @@ class AuthManager(
     fun logout() {
         secrets.put(S_SESSION, null)
         kv.remove(K_LAST_ACTIVE)
+    }
+
+    /** Switches the lock on with the user's own PIN (no temporary credentials involved). Null on success, otherwise the reason. */
+    fun enableLock(pin: String, confirm: String): String? {
+        if (pin != confirm) return "The two PINs do not match."
+        PinPolicy.problem(pin, "")?.let { return it }
+        kv.putString(K_LOGIN, "owner")
+        kv.putString(K_HASH, hasher.hash(pin))
+        kv.putBoolean(K_MUST_CHANGE, false)
+        kv.putInt(K_FAILS, 0); kv.putLong(K_LOCK_UNTIL, 0)
+        lockEnabled = true
+        startSession()
+        return null
+    }
+
+    /** Switches the lock off after checking the current PIN. */
+    fun disableLock(pin: String): Boolean {
+        if (!hasher.verify(pin, kv.getString(K_HASH))) return false
+        lockEnabled = false
+        logout()
+        return true
     }
 
     private fun startSession() {
@@ -136,6 +164,7 @@ class AuthManager(
         const val MAX_LOCK_MS = 15 * 60_000L
         const val DEFAULT_TIMEOUT_MIN = 15
 
+        private const val K_LOCK_ON = "auth.lockEnabled"
         private const val K_LOGIN = "auth.login"
         private const val K_HASH = "auth.pinHash"
         private const val K_MUST_CHANGE = "auth.mustChange"

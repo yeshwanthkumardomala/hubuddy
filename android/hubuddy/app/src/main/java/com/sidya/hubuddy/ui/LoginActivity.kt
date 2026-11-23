@@ -32,6 +32,7 @@ class LoginActivity : Activity() {
         Pal.apply(app.settings.theme, this)
         Pal.styleWindow(this)
         val auth = app.auth
+        if (!auth.lockEnabled) { startActivity(Intent(this, MainActivity::class.java)); finish(); return }   // no sign-in unless the user turned the app lock on
         if (auth.hasSession()) {
             route(auth.mustChangePin)
             return
@@ -66,7 +67,7 @@ class LoginActivity : Activity() {
                 message = ui.text("", 13f, Pal.bad, tag = "message").apply { setPadding(0, ui.dp(10), 0, 0) }
                 addView(message)
             })
-            addView(ui.text("First login uses the temporary credentials from the setup guide; you will be asked to set a new PIN.",
+            addView(ui.text("Use the login number and PIN you set when you turned on the app lock.",
                 12f, Pal.dim).apply { gravity = Gravity.CENTER })
         }
         setContentView(ScrollView(this).apply { setBackgroundColor(Pal.bg); isFillViewport = true; addView(form) })

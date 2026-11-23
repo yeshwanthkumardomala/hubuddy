@@ -22,7 +22,7 @@ class AuthManagerTest {
     private val kv = MemoryKeyValue()
     private val secrets = MemorySecretStore()
     private val fast = PinHasher(iterations = 1000)
-    private fun auth() = AuthManager(kv, secrets, clock, "123456789", "123456", fast)
+    private fun auth() = AuthManager(kv, secrets, clock, "123456789", "123456", fast).also { it.lockEnabled = true }
 
     @Test fun bootstrapLoginSucceedsAndRequiresPinChange() {
         val a = auth()

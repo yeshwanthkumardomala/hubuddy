@@ -241,14 +241,35 @@ class SettingsScreen(host: MainActivity) : Screen(host) {
         })
 
         // ---- Security & session -----------------------------------------------
-        cards.add(ui.card("Security & session") {
-            val t = ui.input("Minutes", "sessionTimeout", InputType.TYPE_CLASS_NUMBER, app.auth.sessionTimeoutMin.toString())
-            addView(ui.text("Auto-logout after inactivity (minutes, 1-240)", 12f, Pal.dim)); addView(t, ui.lp(bottom = 6))
-            addView(ui.button("Save timeout", primary = false) {
-                t.text.toString().toIntOrNull()?.let { app.auth.sessionTimeoutMin = it; t.setText(app.auth.sessionTimeoutMin.toString()); host.toast("Saved.") }
-            }, ui.lp(bottom = 6))
-            addView(ui.button("Change PIN", primary = false, tag = "changePin") { host.startActivity(Intent(host, ChangePinActivity::class.java)) }, ui.lp(bottom = 6))
-            addView(ui.button("Log out", tag = "logout") { host.logout() })
+        cards.add(ui.card("Security & app lock", tag = "securityCard") {
+            if (!app.auth.lockEnabled) {
+                addView(ui.text("The app opens straight to the dashboard. You can protect it with your own PIN if others use this phone.", 12f, Pal.dim), ui.lp(bottom = 8))
+                addView(ui.button("Turn on app lock", primary = false, tag = "lockOn") {
+                    val p1 = ui.input("New PIN (6-8 digits)", "lockPin", InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+                    val p2 = ui.input("Repeat the PIN", "lockPin2", InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+                    val form = ui.vbox(16) { addView(p1, ui.lp(bottom = 8)); addView(p2) }
+                    host.dialog().setTitle("Set your PIN").setView(form)
+                        .setPositiveButton("Turn on") { _, _ ->
+                            val problem = app.auth.enableLock(p1.text.toString(), p2.text.toString())
+                            host.toast(problem ?: "App lock is on."); host.rerender()
+                        }.setNegativeButton("Cancel", null).show()
+                })
+            } else {
+                val t = ui.input("Minutes", "sessionTimeout", InputType.TYPE_CLASS_NUMBER, app.auth.sessionTimeoutMin.toString())
+                addView(ui.text("Auto-logout after inactivity (minutes, 1-240)", 12f, Pal.dim)); addView(t, ui.lp(bottom = 6))
+                addView(ui.button("Save timeout", primary = false) {
+                    t.text.toString().toIntOrNull()?.let { app.auth.sessionTimeoutMin = it; t.setText(app.auth.sessionTimeoutMin.toString()); host.toast("Saved.") }
+                }, ui.lp(bottom = 6))
+                addView(ui.button("Change PIN", primary = false, tag = "changePin") { host.startActivity(Intent(host, ChangePinActivity::class.java)) }, ui.lp(bottom = 6))
+                addView(ui.button("Turn off app lock", primary = false, tag = "lockOff") {
+                    val pin = ui.input("Your PIN", "lockOffPin", InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+                    host.dialog().setTitle("Turn off app lock").setView(ui.vbox(16) { addView(pin) })
+                        .setPositiveButton("Turn off") { _, _ ->
+                            host.toast(if (app.auth.disableLock(pin.text.toString())) "App lock is off." else "That PIN is not right."); host.rerender()
+                        }.setNegativeButton("Cancel", null).show()
+                }, ui.lp(bottom = 6))
+                addView(ui.button("Lock now", tag = "logout") { host.logout() })
+            }
         })
 
         // ---- About ---------------------------------------------------------------

@@ -1,5 +1,23 @@
 # Release notes
 
+## 3.3.0 — Proper trackpad, no sign-in (2026-11-23)
+
+* **No sign-in.** The app opens straight to the dashboard: no login number, no first-login PIN. An optional PIN lock (your own PIN) can be
+  switched on and off in Settings → Security & app lock.
+* **Remote control rebuilt around a real touchpad**, using the touchpad rules of the Tara project (MIT, see NOTICE):
+  one finger moves the pointer (speed 0.5× to 3×, saved); a short tap is a left click; a two-finger tap is a right click; two fingers slide to
+  scroll (vertical and horizontal) or pinch to zoom (Ctrl + wheel); three or more fingers do nothing; a cancelled touch never clicks.
+  **Left, Right, Double and a Drag toggle** (press and hold, for dragging windows and selecting text); the PC lets a held button go by itself if the phone
+  stops sending its heartbeat, is forgotten, or has remote control switched off. Movement is sent in order, one request at a time and merged
+  when the network is slow, so the pointer stays smooth.
+* **Keyboard:** text box, Enter/Backspace/Delete/Esc/Tab, arrows, Home/End/PgUp/PgDn, sticky Ctrl/Shift/Alt/Win, and a Shortcuts card (Copy, Paste, Cut, Undo,
+  Select all, Save, Switch app, Close, Start, media keys). Works on Windows and on Linux (X11, `xdotool`).
+* **Windows window rebuilt:** sharp text on high-resolution screens, resizable, pairing QR code and PIN inside the window (no browser needed),
+  a Copy-invitation button, the per-phone *remote control* switch, a Quit/keep-running question when you close it (it used to just minimise), and no console window
+  flashing when the firewall helper runs.
+* **Linux:** everything in 3.2.0 (Debian package, headless, clipboard, remote control).
+* **Not verified:** the touchpad's feel on a real phone, and the Windows window on a real screen (its code is tested against a stand-in for Tk, not drawn).
+
 ## 3.2.0 — Linux (2026-11-23)
 
 * **Debian package** `hubuddy_3.2.0_all.deb` (about 100 KB): one package for **any CPU** (32-bit and 64-bit x86, ARM, ...) on **Debian 12 and

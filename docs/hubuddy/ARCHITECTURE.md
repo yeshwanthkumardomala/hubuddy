@@ -69,7 +69,7 @@ Hubuddy turns an Android phone into a dashboard and ambient display for your Win
 
 | Concern | Measure |
 | --- | --- |
-| App lock | Login number + PIN (PBKDF2-HMAC-SHA256, 60,000 iterations, constant-time compare); forced PIN change on first login; lockout; session timeout |
+| App lock | Optional and off by default (no sign-in); when switched on in Settings: your own PIN (PBKDF2-HMAC-SHA256, 60,000 iterations, constant-time compare); lockout; session timeout |
 | Secrets on the phone | AES-256-GCM with a non-exportable Android Keystore key; memory-only where unavailable (Android 5.x); `allowBackup=false` |
 | Transport | HTTPS only, pinned per-PC authority, no cleartext anywhere in the app |
 | Exposure | Private-network clients only; the app refuses to send anything to a public address; never forward the port on a router |

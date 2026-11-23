@@ -22,7 +22,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [21, 22])
 class OldAndroidCompatTest {
-    @Before fun realKeystorePath() { HubuddyApp.cipherOverride = null }
+    @Before fun realKeystorePath() { HubuddyApp.cipherOverride = null; HubuddyApp.lockOverride = true }
 
     @Test fun worksWithoutKeystoreAndNeverWritesSecretsToDisk() {
         val app = HubuddyApp.of(RuntimeEnvironment.getApplication())

@@ -13,7 +13,8 @@ MAX_DELTA = 2048
 MAX_TEXT = 500
 BUTTONS = ("left", "right", "middle")
 KEYS = ("enter", "backspace", "tab", "esc", "space", "delete", "up", "down", "left", "right", "home", "end", "pageup", "pagedown",
-        "win", "volup", "voldown", "mute", "playpause", "next", "prev") + tuple(f"f{i}" for i in range(1, 13))
+        "win", "volup", "voldown", "mute", "playpause", "next", "prev") + tuple(f"f{i}" for i in range(1, 13)) \
+    + tuple("abcdefghijklmnopqrstuvwxyz0123456789")   # letters and digits, so shortcuts such as Ctrl+C work
 MODS = ("ctrl", "shift", "alt", "win")
 POWER = ("sleep", "restart", "shutdown", "abort")
 VOLUME = ("up", "down", "mute")
@@ -51,7 +52,18 @@ def validate_events(events) -> list[dict]:
                 raise BadRequest("unknown button")
             out.append({"t": t, "button": e.get("button", "left"), "double": bool(e.get("double", False))})
         elif t == "scroll":
-            out.append({"t": t, "dy": _int(e.get("dy"), -MAX_DELTA, MAX_DELTA, "dy")})
+            out.append({"t": t, "dx": _int(e.get("dx", 0), -MAX_DELTA, MAX_DELTA, "dx"), "dy": _int(e.get("dy", 0), -MAX_DELTA, MAX_DELTA, "dy")})
+        elif t == "button":
+            if e.get("button") not in BUTTONS or not isinstance(e.get("down"), bool):
+                raise BadRequest("button needs a known button and down true or false")
+            out.append({"t": t, "button": e["button"], "down": e["down"]})
+        elif t == "zoom":
+            steps = _int(e.get("steps"), -8, 8, "steps")
+            if steps == 0:
+                raise BadRequest("steps must not be 0")
+            out.append({"t": t, "steps": steps})
+        elif t in ("release", "ping"):
+            out.append({"t": t})
         elif t == "key":
             if e.get("key") not in KEYS:
                 raise BadRequest("unknown key")
@@ -73,7 +85,9 @@ class Backend:
     """What a platform must provide. Methods raise Unavailable when the platform cannot do them."""
     def move(self, dx, dy): raise Unavailable()
     def click(self, button, double): raise Unavailable()
-    def scroll(self, dy): raise Unavailable()
+    def scroll(self, dx, dy): raise Unavailable()
+    def button(self, button, down): raise Unavailable()
+    def zoom(self, steps): raise Unavailable()
     def key(self, key, mods): raise Unavailable()
     def text(self, text): raise Unavailable()
     def power(self, action): raise Unavailable()
@@ -160,10 +174,26 @@ class WindowsBackend(Backend):
         for _ in range(2 if double else 1):
             self._send(self._mouse(down), self._mouse(up))
 
-    def scroll(self, dy): self._send(self._mouse(0x0800, -dy * 120 // 10 if abs(dy) < 10 else -dy * 12))
+    def scroll(self, dx, dy):
+        """Wheel units as Windows counts them (120 = one notch); positive scrolls up/left. Small values are fine: apps accumulate them."""
+        seq = []
+        if dy: seq.append(self._mouse(0x0800, dy))
+        if dx: seq.append(self._mouse(0x1000, dx))
+        if seq: self._send(*seq)
+
+    def button(self, button, down):
+        flag = {"left": (0x0002, 0x0004), "right": (0x0008, 0x0010), "middle": (0x0020, 0x0040)}[button][0 if down else 1]
+        self._send(self._mouse(flag))
+
+    def zoom(self, steps):
+        """Ctrl plus the wheel, in one atomic batch so Ctrl cannot get stuck."""
+        ctrl_held = bool(self.u.GetAsyncKeyState(0x11) & 0x8000)
+        wheel = self._mouse(0x0800, steps * 120)
+        self._send(*([wheel] if ctrl_held else [self._key(0x11), wheel, self._key(0x11, up=True)]))
 
     def key(self, key, mods):
-        seq = [self._key(self.MOD[m]) for m in mods] + [self._key(self.VK[key]), self._key(self.VK[key], up=True)] + \
+        vk = self.VK.get(key) or ord(key.upper())
+        seq = [self._key(self.MOD[m]) for m in mods] + [self._key(vk), self._key(vk, up=True)] + \
               [self._key(self.MOD[m], up=True) for m in reversed(mods)]
         self._send(*seq)
 
@@ -222,12 +252,29 @@ class LinuxBackend(Backend):
     def click(self, button, double):
         self._run([self._tool("xdotool"), "click", *(["--repeat", "2", "--delay", "60"] if double else []), self.XBTN[button]])
 
-    def scroll(self, dy):
-        n = max(1, min(abs(dy) // 8 + 1, 20))
-        self._run([self._tool("xdotool"), "click", "--repeat", str(n), "5" if dy > 0 else "4"])
+    _acc_y = 0
+    _acc_x = 0
+
+    def scroll(self, dx, dy):
+        """Positive scrolls up/left. Small deltas add up until they make a full notch (about 60 units), so slow scrolling is smooth."""
+        for attr, pos, neg in (("_acc_y", "4", "5"), ("_acc_x", "6", "7")):
+            val = (dy if attr == "_acc_y" else dx)
+            if not val:
+                continue
+            total = getattr(self, attr) + val
+            notches = int(total / 60)
+            setattr(self, attr, total - notches * 60)
+            if notches:
+                self._run([self._tool("xdotool"), "click", "--repeat", str(min(abs(notches), 20)), pos if notches > 0 else neg])
+
+    def button(self, button, down):
+        self._run([self._tool("xdotool"), "mousedown" if down else "mouseup", self.XBTN[button]])
+
+    def zoom(self, steps):
+        self._run([self._tool("xdotool"), "keydown", "ctrl", "click", "--repeat", str(abs(steps)), "4" if steps > 0 else "5", "keyup", "ctrl"])
 
     def key(self, key, mods):
-        combo = "+".join([self.XMOD[m] for m in mods] + [self.XKEY[key]])
+        combo = "+".join([self.XMOD[m] for m in mods] + [self.XKEY.get(key, key)])
         self._run([self._tool("xdotool"), "key", "--", combo])
 
     def text(self, text): self._run([self._tool("xdotool"), "type", "--delay", "8", "--", text])

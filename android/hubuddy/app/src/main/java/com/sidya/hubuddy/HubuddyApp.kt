@@ -46,7 +46,7 @@ class HubuddyApp : Application() {
     val settings by lazy { Settings(kv) }
 
     val auth by lazy {
-        AuthManager(kv, secrets, SystemClock, BuildConfig.BOOTSTRAP_LOGIN, BuildConfig.BOOTSTRAP_PIN)
+        AuthManager(kv, secrets, SystemClock, BuildConfig.BOOTSTRAP_LOGIN, BuildConfig.BOOTSTRAP_PIN).also { a -> lockOverride?.let { a.lockEnabled = it } }
     }
 
     val api by lazy { ApiClient({ settings.timeoutSec * 1000 }, { settings.timeoutSec * 1000 + 1000 }) }
@@ -81,6 +81,9 @@ class HubuddyApp : Application() {
     companion object {
         /** Tests (Robolectric has no AndroidKeyStore) inject a cipher here before first use. */
         @JvmStatic var cipherOverride: SecretCipher? = null
+
+        /** Tests that exercise the app lock switch it on here (it is off by default). */
+        @JvmStatic var lockOverride: Boolean? = null
 
         fun of(ctx: Context) = ctx.applicationContext as HubuddyApp
     }

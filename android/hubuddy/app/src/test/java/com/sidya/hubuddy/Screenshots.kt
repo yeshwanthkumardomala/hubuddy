@@ -39,7 +39,7 @@ class Screenshots {
 
     @Before fun setUp() {
         assumeTrue(outDir != null)
-        HubuddyApp.cipherOverride = TestCipher()
+        HubuddyApp.cipherOverride = TestCipher(); HubuddyApp.lockOverride = true
     }
 
     private fun idle(ms: Long = 0) {

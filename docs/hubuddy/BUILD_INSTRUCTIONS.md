@@ -31,13 +31,10 @@ prints its path and size, and exits non-zero on any failure. If PowerShell refus
 
 On Linux or macOS use `./gradlew`.
 
-## First-login credentials
+## Sign-in
 
-They are **not stored in the repository**. Your build bakes them in from, in order: `local.properties`
-(`hubuddy.bootstrapLogin=` and `hubuddy.bootstrapPin=`), the environment variables `HUBUDDY_BOOTSTRAP_LOGIN` and
-`HUBUDDY_BOOTSTRAP_PIN`, or — if neither is set — a random login number and PIN that the build prints
-("Hubuddy first-login credentials generated for this build"). They are temporary: the app forces a new PIN on
-first login. `local.properties` is git-ignored.
+The app has **no sign-in**: it opens straight to the dashboard. An optional PIN lock can be switched on in Settings → Security & app lock
+(your own PIN, nothing is baked into the build). The build-time bootstrap credentials of earlier versions are no longer used.
 
 ## Outputs
 
