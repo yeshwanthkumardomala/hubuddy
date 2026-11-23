@@ -44,7 +44,7 @@ class MonitorScreen(host: MainActivity) : Screen(host) {
         val pc = section(s, "pc")
         val cards = ArrayList<View>()
         cards += ui.card("PC status", tag = "pc_status") {
-            addView(ui.row("Agent", if (s.online) "online" else "offline", if (s.online) Pal.ok else Pal.bad))
+            addView(ui.row("Hubuddy on PC", if (s.online) "online" else "offline", if (s.online) Pal.ok else Pal.bad))
             pc?.optString("hostname")?.takeIf { it.isNotEmpty() }?.let { addView(ui.row("Host", it)) }
             if (pc?.optBoolean("asleep") == true) addView(ui.row("Display", "asleep", Pal.warn))
             addView(ui.row("Last update", Fmt.ago(s.snapshotAt)))

@@ -54,10 +54,10 @@ class PcRegistryTest {
         val r = PcRegistry(kv, secrets)
         val p = r.add("  A very long name that must be cut to twenty-four characters  ")!!
         assertEquals(24, p.name.length)
-        r.update(p.copy(mode = "wifi", address = "192.168.1.9:8765"))
+        r.update(p.copy(address = "192.168.1.9:8765"))
         val again = PcRegistry(kv, secrets)
         assertEquals("192.168.1.9:8765", again.get(p.id)!!.endpoint())
-        assertEquals("127.0.0.1:8765", again.get("pc1")!!.endpoint())
+        assertEquals("", again.get("pc1")!!.endpoint())
     }
 }
 
@@ -158,24 +158,37 @@ class MultiPcUiTest {
         assertTrue(app().repo.state.pcs.first { it.pc.id == "pc1" }.online)
     }
 
-    @Test fun settingsAddsEditsAndRemovesPcs() {
+    @Test fun settingsRenamesAndRemovesPcsAndOffersFourWaysToAdd() {
+        app().pcs.add("Second")
         val m = Robolectric.buildActivity(MainActivity::class.java).setup().get()
         m.tagged<View>("nav_Settings")!!.performClick(); idle(100)
-        assertNull(m.tagged<View>("removePc"))
-        m.tagged<View>("setchip_add")!!.performClick(); idle(100)
-        assertEquals(2, app().pcs.list().size)
+        for (t in listOf("scanQr", "findPcs", "pasteInvite", "enterAddress")) assertNotNull(t, m.tagged<View>(t))
         val name = m.tagged<android.widget.EditText>("pcName")!!
         name.setText("Studio laptop")
-        m.tagged<View>("mode_wifi")!!.performClick()
-        m.tagged<android.widget.EditText>("wifiAddress")!!.setText("192.168.1.50:8765")
         m.tagged<View>("saveConn")!!.performClick()
-        assertEquals("Studio laptop", app().pcs.list()[1].name)
-        assertEquals("192.168.1.50:8765", app().pcs.list()[1].endpoint())
+        assertEquals("Studio laptop", app().pcs.list()[0].name)
         // Duplicate names are refused.
-        name.setText("my pc"); m.tagged<View>("saveConn")!!.performClick()
+        m.tagged<View>("setchip_pc2")!!.performClick(); idle(100)
+        m.tagged<android.widget.EditText>("pcName")!!.setText("studio laptop")
+        m.tagged<View>("saveConn")!!.performClick()
         assertTrue(m.tagged<TextView>("connMessage")!!.text.contains("already has this name"))
         m.tagged<View>("removePc")!!.performClick()
         assertNotNull(m.tagged<View>("nav_Settings"))
+    }
+
+    @Test fun upsertFillsThePlaceholderThenUpdatesTheSamePcAndAddsOthers() {
+        val kv = MemoryKeyValue(); val secrets = MemorySecretStore()
+        val r = PcRegistry(kv, secrets)
+        val a = r.upsertPaired(TestPki.A.hostId, "Desk", TestPki.A.caB64, "192.168.1.5:8765", "AA:BB:CC:DD:EE:FF")!!
+        assertEquals("pc1", a.id); assertEquals(1, r.list().size)
+        val again = r.upsertPaired(TestPki.A.hostId, "Renamed on PC", TestPki.A.caB64, "192.168.1.6:8765", "")!!
+        assertEquals("pc1", again.id); assertEquals("Desk", again.name); assertEquals("192.168.1.6:8765", again.address); assertEquals("AA:BB:CC:DD:EE:FF", again.mac)
+        r.setToken("pc1", "t".repeat(43))
+        val b = r.upsertPaired(TestPki.B.hostId, "Desk", TestPki.B.caB64, "192.168.1.7:8765", "")!!
+        assertEquals(2, r.list().size); assertEquals("Desk 2", b.name)
+        repeat(6) { r.upsertPaired("0000000$it-0000-0000-0000-000000000000", "X$it", "ca", "10.0.0.$it:1", "") }
+        assertEquals(8, r.list().size)
+        assertNull("limit", r.upsertPaired("11111111-0000-0000-0000-000000000000", "Nine", "ca", "10.0.0.9:1", ""))
     }
 
     @Test fun lightThemeBuildsAndSwitches() {

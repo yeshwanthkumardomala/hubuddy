@@ -20,7 +20,7 @@ class FleetScreen(host: MainActivity) : Screen(host) {
         if (s.pcs.size < PcRegistry.MAX_PCS) addView(ui.card(tag = "fleet_add") {
             addView(ui.text(if (s.pcs.size < 2) "Add your other computers to see all of their readings here." else "You can connect up to ${PcRegistry.MAX_PCS} PCs and laptops.", 12f, Pal.dim))
             addView(ui.button("Add a PC", primary = false, tag = "fleet_add_button") {
-                host.app.pcs.add()?.let { host.app.settings.lastTab = 4; host.pendingEditPc = it.id; host.openTab(4) }
+                host.app.settings.lastTab = 4; host.openTab(4)
             }, ui.lp(top = 8))
         })
     }
@@ -68,7 +68,7 @@ class FleetScreen(host: MainActivity) : Screen(host) {
             addView(ui.hbox {
                 addView(ui.dot(color))
                 addView(ui.text(p.pc.name, 16f, bold = true, tag = "pc_name_${p.pc.id}"), ui.lp(0, -2, 1f))
-                addView(ui.text(if (p.pc.mode == "usb") "USB" else "Wi-Fi", 10f, Pal.dim))
+                if (p.paired && p.pc.address.isNotEmpty()) addView(ui.text(p.pc.address.substringBeforeLast(':'), 10f, Pal.dim))
             })
             addView(ui.text(statusLine, 12f, if (p.online) Pal.dim else color), ui.lp(bottom = 6))
             if (stats == null) {

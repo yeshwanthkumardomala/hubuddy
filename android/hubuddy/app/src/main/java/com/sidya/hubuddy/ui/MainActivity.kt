@@ -278,7 +278,7 @@ class MainActivity : Activity() {
             .setNegativeButton("Cancel", null).show()
     }
 
-    private fun dialog() = AlertDialog.Builder(this, if (Pal.isLight) R.style.Theme_Hubuddy_DialogLight else R.style.Theme_Hubuddy_Dialog)
+    fun dialog() = AlertDialog.Builder(this, if (Pal.isLight) R.style.Theme_Hubuddy_DialogLight else R.style.Theme_Hubuddy_Dialog)
 
     fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 
@@ -310,6 +310,15 @@ class MainActivity : Activity() {
     }
 
     // ---- lifecycle ----------------------------------------------------------------
+    val pairing by lazy { PairingFlows(this) }
+    val transfers by lazy { Transfers(this) }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        pairing.onResult(requestCode, resultCode, data)
+        transfers.onResult(requestCode, resultCode, data)
+    }
+
     override fun onResume() {
         super.onResume()
         if (!app.auth.canAccessDashboard()) { toLogin(null); return }

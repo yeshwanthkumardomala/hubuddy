@@ -1,7 +1,7 @@
 package com.sidya.hubuddy.net
 
 /**
- * Validates the agent address. Only loopback (USB / adb reverse), private LAN,
+ * Validates the PC address. Only loopback, private LAN (including USB tethering),
  * link-local and mDNS ".local" hosts are accepted, so the app never sends the
  * pairing token to a host on the public internet.
  */
@@ -15,13 +15,13 @@ object AddressValidator {
 
     fun validate(raw: String): Result {
         var s = raw.trim()
-        if (s.isEmpty()) return Result.Error("Enter the agent address, e.g. 127.0.0.1:8765")
-        var scheme = "http"
+        if (s.isEmpty()) return Result.Error("Enter the PC address, e.g. 192.168.1.20:8765")
+        val scheme = "https" // the PC is only ever reached over its pinned, encrypted connection
         val sep = s.indexOf("://")
         if (sep >= 0) {
-            scheme = s.substring(0, sep).lowercase()
+            val given = s.substring(0, sep).lowercase()
             s = s.substring(sep + 3)
-            if (scheme != "http" && scheme != "https") return Result.Error("Use http:// or https://")
+            if (given != "https") return Result.Error("Hubuddy only connects securely: leave out the http:// part.")
         }
         s = s.trimEnd('/')
         if (s.contains('/') || s.contains('?') || s.contains('#') || s.contains('@') || s.contains(' '))

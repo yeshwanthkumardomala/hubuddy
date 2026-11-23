@@ -34,10 +34,10 @@ abstract class Screen(val host: MainActivity) {
     fun banner(s: DashState): View? {
         if (s.online) return null
         val text = when {
-            !s.paired -> "PC agent not paired. Open Settings → Connection to pair."
+            !s.paired -> "This PC is not paired. Open Settings → Add a PC or laptop."
             s.snapshot != null && app.settings.showCachedOffline ->
                 "PC offline — showing last saved data from ${Fmt.ago(s.snapshotAt)}. ${s.error ?: ""}"
-            s.connecting && s.failures == 0 -> "Connecting to the PC agent…"
+            s.connecting && s.failures == 0 -> "Connecting to the PC…"
             else -> "PC offline. ${s.error ?: ""}"
         }
         val wait = (s.nextRetryAt - System.currentTimeMillis()) / 1000

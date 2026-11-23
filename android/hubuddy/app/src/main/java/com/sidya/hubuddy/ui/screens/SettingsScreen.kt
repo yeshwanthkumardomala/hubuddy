@@ -6,15 +6,12 @@ import android.text.InputType
 import android.view.View
 import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.RadioButton
-import android.widget.RadioGroup
 import android.widget.TextView
 import com.sidya.hubuddy.BuildConfig
 import com.sidya.hubuddy.core.PcRegistry
 import com.sidya.hubuddy.data.DashState
 import com.sidya.hubuddy.data.PcLive
 import com.sidya.hubuddy.data.DashboardRepository
-import com.sidya.hubuddy.net.AddressValidator
 import com.sidya.hubuddy.net.ApiResult
 import com.sidya.hubuddy.net.describe
 import com.sidya.hubuddy.ui.ChangePinActivity
@@ -39,10 +36,6 @@ class SettingsScreen(host: MainActivity) : Screen(host) {
 
     private fun statusColor(l: PcLive?) = if (l?.online == true) Pal.ok else if (l?.paired == true) Pal.bad else Pal.warn
 
-    private fun RadioButton.tint() {
-        buttonTintList = android.content.res.ColorStateList(arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()), intArrayOf(Pal.accent, Pal.dim))
-    }
-
     override fun render(s: DashState): View = ui.vbox {
         val cards = ArrayList<View>()
         val cfg = app.settings
@@ -59,80 +52,40 @@ class SettingsScreen(host: MainActivity) : Screen(host) {
                     all.forEach { p ->
                         addView(ui.chip(p.name, p.id == target.id, "setchip_${p.id}") { host.editPcId = p.id; host.rerender() }, ui.lp(-2, -2).apply { rightMargin = ui.dp(6) })
                     }
-                    if (pcs.canAdd) addView(ui.chip("+ Add PC", false, "setchip_add") {
-                        pcs.add()?.let { host.editPcId = it.id; app.repo.refreshNow(); host.rerender() }
-                    })
                 })
             }, ui.lp(bottom = 10))
             status = ui.text(statusText(live), 13f, statusColor(live), tag = "connStatus")
-            addView(status, ui.lp(bottom = 8))
+            addView(status, ui.lp(bottom = 4))
+            val paired = app.agent.isPaired(target.id)
+            addView(ui.text(if (paired) "Last seen at ${target.address}. If its address changes, Hubuddy finds it again by itself." else "Not paired yet. Add this PC below.", 12f, Pal.dim), ui.lp(bottom = 8))
+            if (!app.secureStorageAvailable) addView(ui.text("Android Keystore unavailable: the key for this PC is kept in memory only and must be re-paired after restart.", 12f, Pal.warn), ui.lp(bottom = 6))
             val name = ui.input("Name, e.g. Dock laptop", "pcName", InputType.TYPE_CLASS_TEXT, target.name)
             addView(ui.text("Name", 12f, Pal.dim)); addView(name, ui.lp(bottom = 6))
-            val usb = RadioButton(host).apply { text = "USB (adb reverse → 127.0.0.1)"; setTextColor(Pal.text); id = View.generateViewId(); tag = "mode_usb"; tint() }
-            val wifi = RadioButton(host).apply { text = "Local Wi-Fi"; setTextColor(Pal.text); id = View.generateViewId(); tag = "mode_wifi"; tint() }
-            val group = RadioGroup(host).apply { addView(usb); addView(wifi); check(if (target.mode == "wifi") wifi.id else usb.id) }
-            addView(group)
-            addView(ui.text("USB works for one PC at a time (one cable); use Wi-Fi for the others.", 11f, Pal.dim), ui.lp(bottom = 6))
-            val port = ui.input("USB port (8765)", "usbPort", InputType.TYPE_CLASS_NUMBER, target.usbPort.toString())
-            val addr = ui.input("PC address, e.g. 192.168.1.100:8765", "wifiAddress", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI, target.address)
-            addView(ui.text("USB port", 12f, Pal.dim)); addView(port, ui.lp(bottom = 6))
-            addView(ui.text("Wi-Fi address (this PC's LAN IP)", 12f, Pal.dim)); addView(addr, ui.lp(bottom = 6))
             val msg = ui.text("", 12f, Pal.dim, tag = "connMessage")
-            fun save(): Boolean {
-                val p = port.text.toString().toIntOrNull()
-                if (p == null || p !in 1..65535) { msg.setTextColor(Pal.bad); msg.text = "USB port must be 1-65535."; return false }
-                val mode = if (group.checkedRadioButtonId == wifi.id) "wifi" else "usb"
-                if (mode == "wifi") {
-                    val v = AddressValidator.validate(addr.text.toString())
-                    if (v is AddressValidator.Result.Error) { msg.setTextColor(Pal.bad); msg.text = v.message; return false }
-                }
+            fun saveName(): Boolean {
                 val n = name.text.toString().trim()
                 if (n.isEmpty()) { msg.setTextColor(Pal.bad); msg.text = "Give this PC a name."; return false }
                 if (pcs.list().any { it.id != target.id && it.name.equals(n, true) }) { msg.setTextColor(Pal.bad); msg.text = "Another PC already has this name."; return false }
-                pcs.update(target.copy(name = n, mode = mode, usbPort = p, address = addr.text.toString().trim()))
+                pcs.update(target.copy(name = n))
                 return true
             }
             addView(ui.hbox {
-                addView(ui.button("Save", tag = "saveConn") {
-                    if (save()) { msg.setTextColor(Pal.ok); msg.text = "Saved: ${pcs.get(target.id)?.endpoint()}"; app.repo.refreshNow() }
+                addView(ui.button("Save name", tag = "saveConn") {
+                    if (saveName()) { msg.setTextColor(Pal.ok); msg.text = "Saved."; app.repo.refreshNow() }
                 }, ui.lp(0, -2, 1f).apply { rightMargin = ui.dp(6) })
                 addView(ui.button("Test connection", primary = false, tag = "testConn") {
-                    if (!save()) return@button
-                    msg.setTextColor(Pal.dim); msg.text = "Testing ${pcs.get(target.id)?.endpoint()}…"
+                    if (!paired) { msg.setTextColor(Pal.bad); msg.text = "Pair this PC first."; return@button }
+                    msg.setTextColor(Pal.dim); msg.text = "Testing…"
                     app.repo.background({ app.agent.ping(target.id) }) { r ->
-                        if (r is ApiResult.Ok) {
-                            msg.setTextColor(Pal.ok)
-                            msg.text = "Reachable in ${r.latencyMs} ms · ${r.json.optString("service", "agent")} ${r.json.optString("version")}" +
-                                if (!app.agent.isPaired(target.id)) " · now pair below" else ""
-                        } else { msg.setTextColor(Pal.bad); msg.text = (r as ApiResult.Err).describe() }
+                        if (r is ApiResult.Ok) { msg.setTextColor(Pal.ok); msg.text = "Reachable in ${r.latencyMs} ms · identity verified" }
+                        else { msg.setTextColor(Pal.bad); msg.text = (r as ApiResult.Err).describe() }
                     }
                 }, ui.lp(0, -2, 1f))
             })
             addView(msg, ui.lp(top = 6))
-
-            // Pairing for this PC
-            val paired = app.agent.isPaired(target.id)
-            addView(ui.spacer(8))
-            addView(ui.text("Pairing", 12f, Pal.walnut, bold = true))
-            addView(ui.text(
-                if (paired) "Paired. The device token is stored encrypted with the Android Keystore."
-                else "Start the agent on this PC; it prints a 6-digit pairing code. Enter it here.", 12f, Pal.dim), ui.lp(bottom = 6))
-            if (!app.secureStorageAvailable) addView(ui.text("Android Keystore unavailable: the token is kept in memory only and must be re-paired after restart.", 12f, Pal.warn))
-            val code = ui.input("Pairing code", "pairCode", InputType.TYPE_CLASS_NUMBER)
-            val pmsg = ui.text("", 12f, Pal.dim, tag = "pairMessage")
-            if (!paired) addView(code, ui.lp(bottom = 6))
             addView(ui.hbox {
-                if (!paired) addView(ui.button("Pair", tag = "pairButton") {
-                    if (!save()) return@button
-                    pmsg.setTextColor(Pal.dim); pmsg.text = "Pairing…"
-                    val c = code.text.toString()
-                    app.repo.background({ app.agent.pair(c, "${Build.MANUFACTURER} ${Build.MODEL}", target.id) }) { r ->
-                        if (r is ApiResult.Ok) { host.toast("Paired."); app.repo.refreshNow(); host.rerender() }
-                        else { pmsg.setTextColor(Pal.bad); pmsg.text = (r as ApiResult.Err).describe().let { d -> if (r.kind.name == "BAD_ADDRESS") r.message else d } }
-                    }
-                }, ui.lp(0, -2, 1f))
-                else addView(ui.button("Unpair", primary = false, tag = "unpairButton") {
-                    host.confirm("Unpair ${target.name}?", "This phone will stop receiving data from it until you pair again.", "Unpair") {
+                if (paired) addView(ui.button("Unpair", primary = false, tag = "unpairButton") {
+                    host.confirm("Unpair ${target.name}?", "This phone will stop receiving data from it until you pair again. Also choose Forget on the PC to remove the phone there.", "Unpair") {
                         app.agent.unpair(target.id); app.repo.refreshNow(); host.rerender()
                     }
                 }, ui.lp(0, -2, 1f))
@@ -140,9 +93,20 @@ class SettingsScreen(host: MainActivity) : Screen(host) {
                     host.confirm("Remove ${target.name}?", "It disappears from this phone and its pairing is deleted. The PC itself is not changed.", "Remove") {
                         pcs.remove(target.id); host.editPcId = null; host.monitorSel = ""; app.repo.refreshNow(); host.rerender()
                     }
-                }, ui.lp(-2, -2).apply { leftMargin = ui.dp(6) })
-            })
-            addView(pmsg, ui.lp(top = 6))
+                }, ui.lp(0, -2, 1f).apply { if (paired) leftMargin = ui.dp(6) })
+            }, ui.lp(top = 4))
+        })
+
+        // ---- Add a PC --------------------------------------------------------------------
+        cards.add(ui.card("Add a PC or laptop", tag = "addPcCard") {
+            if (!pcs.canAdd) {
+                addView(ui.text("You can pair up to ${PcRegistry.MAX_PCS} computers. Remove one to add another.", 12f, Pal.dim)); return@card
+            }
+            addView(ui.text("Install Hubuddy on the computer, open it, and choose how to pair. Works on the same Wi-Fi or LAN, or over USB tethering. No developer options needed.", 12f, Pal.dim), ui.lp(bottom = 8))
+            addView(ui.button("Scan QR code", tag = "scanQr") { host.pairing.scanQr() }, ui.lp(bottom = 6))
+            addView(ui.button("Find PCs on this network (PIN)", primary = false, tag = "findPcs") { host.pairing.findPcs() }, ui.lp(bottom = 6))
+            addView(ui.button("Paste invitation", primary = false, tag = "pasteInvite") { host.pairing.pasteInvitation() }, ui.lp(bottom = 6))
+            addView(ui.button("Enter address (advanced)", primary = false, tag = "enterAddress") { host.pairing.enterAddress() })
         })
 
         // ---- Refresh & offline ----------------------------------------------
@@ -294,7 +258,7 @@ class SettingsScreen(host: MainActivity) : Screen(host) {
             addView(ui.row("Package", BuildConfig.APPLICATION_ID))
             addView(ui.row("Android", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"))
             addView(ui.row("Secure storage", if (app.secureStorageAvailable) "Android Keystore" else "unavailable", if (app.secureStorageAvailable) Pal.ok else Pal.warn))
-            addView(ui.text("Native app, no WebView. Plain HTTP on your LAN is not encrypted; prefer USB mode or a trusted network.", 11f, Pal.dim).apply { setPadding(0, ui.dp(6), 0, 0) })
+            addView(ui.text("Native app, no WebView. PCs are reached over an encrypted connection that only accepts the identity you paired with.", 11f, Pal.dim).apply { setPadding(0, ui.dp(6), 0, 0) })
         })
         addView(columns(cards))
     }

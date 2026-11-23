@@ -58,6 +58,10 @@ class ControlsScreen(host: MainActivity) : Screen(host) {
                 })
             }
         })
+        addView(ui.card("Send & files", tag = "send_card") {
+            addView(ui.text("Send text, links, your clipboard and files to this PC, and receive what the PC sends you.", 12f, Pal.dim), ui.lp(bottom = 8))
+            addView(ui.button("Open Send & files", primary = false, tag = "open_send") { host.push(SendScreen(host)) })
+        })
         addView(ui.card("Phone shortcuts", tag = "local_shortcuts") {
             val list = LocalShortcut.parse(app.settings.localShortcuts)
             if (list.isEmpty()) empty("Add links or apps in Settings → Phone shortcuts.")

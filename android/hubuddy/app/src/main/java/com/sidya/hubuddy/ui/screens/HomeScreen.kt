@@ -39,7 +39,7 @@ class HomeScreen(host: MainActivity) : Screen(host) {
         }
         cards += ui.card("Network", tag = "card_net", onClick = { host.push(NetworkScreen(host)) }) {
             val net = section(s, "network")
-            addView(ui.row("Agent link", if (s.online) "${s.latencyMs} ms" else "unreachable", if (s.online) Pal.ok else Pal.bad))
+            addView(ui.row("PC link", if (s.online) "${s.latencyMs} ms" else "unreachable", if (s.online) Pal.ok else Pal.bad))
             if (net != null) addView(ui.row("PC internet", if (net.optBoolean("online")) "online" else "offline",
                 if (net.optBoolean("online")) Pal.ok else Pal.bad))
             if (stats != null) addView(ui.row("PC ↓ / ↑", "${Fmt.kbps(stats.num("net_down"))} / ${Fmt.kbps(stats.num("net_up"))}"))
@@ -47,7 +47,7 @@ class HomeScreen(host: MainActivity) : Screen(host) {
         cards += ui.card("Claude Code", tag = "card_ai", onClick = { host.openTab(2) }) {
             val claude = section(s, "claude")
             val alert = section(s, "alert")
-            if (claude == null && alert == null) empty("Claude Code agent not connected.")
+            if (claude == null && alert == null) empty("Claude Code is not connected.")
             else {
                 addView(ui.row("State", AiScreen.stateLabel(claude, alert, section(s, "sessions_info")), AiScreen.stateColor(alert)))
                 val five = claude?.optJSONObject("limits")?.optJSONObject("five_hour")

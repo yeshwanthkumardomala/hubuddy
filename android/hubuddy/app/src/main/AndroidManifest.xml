@@ -5,6 +5,10 @@
     <!-- Talk to the PC agent on the local network and fetch weather/GitHub. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Only to read the pairing QR code. Everything else works without it (paste an invitation or find the PC). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <!-- Package visibility (Android 11+) for "launch app" shortcuts; no effect on Android 9. -->
     <queries>
@@ -47,6 +51,11 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
         <!-- Hubuddy-style ambient display; landscape either way up. -->
+        <activity
+            android:name=".ui.ScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            tools:ignore="DiscouragedApi" />
         <activity
             android:name=".ui.dock.DockActivity"
             android:exported="false"

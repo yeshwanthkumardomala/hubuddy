@@ -20,8 +20,8 @@ class AiScreen(host: MainActivity) : Screen(host) {
         val sessions = section(s, "sessions_info")
         if (claude == null && alert == null) {
             addView(ui.card("Claude Code", tag = "ai_empty") {
-                empty("Claude Code agent not connected.")
-                addView(ui.text("Run the Hubuddy agent on your PC (docs/hubuddy/API_SETUP.md). Limits and alerts need its Claude setup step.", 12f, Pal.dim))
+                empty("Claude Code is not connected.")
+                addView(ui.text("Install Hubuddy on your PC and pair it in Settings. Limits and alerts need its Claude setup step (docs/hubuddy/API_SETUP.md).", 12f, Pal.dim))
             })
             return@vbox
         }

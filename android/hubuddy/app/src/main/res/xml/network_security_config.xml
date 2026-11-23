@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The agent runs on your own PC over plain HTTP on the LAN or via adb reverse.
-     Cleartext is permitted so that works, but the app itself refuses any agent
-     address that is not loopback/private (see AddressValidator). Plain HTTP is NOT
-     encrypted: use a trusted network, or USB (adb reverse) mode. -->
+<!-- Everything leaves the phone over HTTPS. PCs are reached by a pinned private identity (see PinnedTls), so nothing
+     here depends on the phone's list of trusted authorities, and plain HTTP is not allowed anywhere. -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="true">
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>

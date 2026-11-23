@@ -11,8 +11,10 @@ import java.net.NoRouteToHostException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLException
 
-enum class ErrKind { BAD_ADDRESS, NOT_PAIRED, UNAUTHORIZED, TIMEOUT, UNREACHABLE, HTTP, BAD_RESPONSE, RATE_LIMITED }
+enum class ErrKind { BAD_ADDRESS, NOT_PAIRED, UNAUTHORIZED, TIMEOUT, UNREACHABLE, HTTP, BAD_RESPONSE, RATE_LIMITED, UNTRUSTED }
 
 sealed class ApiResult {
     data class Ok(val json: JSONObject, val latencyMs: Long) : ApiResult()
@@ -22,13 +24,14 @@ sealed class ApiResult {
 /** Human-readable text for an error, shown in the UI. Never contains the token. */
 fun ApiResult.Err.describe(): String = when (kind) {
     ErrKind.BAD_ADDRESS -> message
-    ErrKind.NOT_PAIRED -> "Not paired with the PC agent. Pair in Settings."
-    ErrKind.UNAUTHORIZED -> "Agent rejected the pairing token. Pair again in Settings."
-    ErrKind.TIMEOUT -> "Agent did not answer in time."
-    ErrKind.UNREACHABLE -> "Agent unreachable. Is it running? (USB: run adb reverse)"
-    ErrKind.HTTP -> "Agent error (HTTP $code)."
-    ErrKind.BAD_RESPONSE -> "Unexpected response from agent."
+    ErrKind.NOT_PAIRED -> "Not paired with this PC. Pair in Settings."
+    ErrKind.UNAUTHORIZED -> if (message == "pairing") "The invitation or PIN is wrong or has expired. Start pairing again on the PC." else "This PC no longer trusts this phone. Pair again in Settings."
+    ErrKind.TIMEOUT -> "The PC did not answer in time."
+    ErrKind.UNREACHABLE -> "Cannot reach the PC. Is Hubuddy running there, on the same Wi-Fi or LAN (or USB tethering)?"
+    ErrKind.HTTP -> if (message.isNotEmpty()) message else "The PC reported an error (HTTP $code)."
+    ErrKind.BAD_RESPONSE -> "Unexpected response from the PC."
     ErrKind.RATE_LIMITED -> "Too many attempts. Wait a minute and try again."
+    ErrKind.UNTRUSTED -> "This computer's identity does not match the one you paired with. If you reinstalled Hubuddy there, pair again."
 }
 
 /**
@@ -45,6 +48,7 @@ class ApiClient(
         body: JSONObject? = null,
         bearer: String? = null,
         headers: Map<String, String> = emptyMap(),
+        tls: PinnedTls? = null,
     ): ApiResult {
         val started = System.nanoTime()
         val conn = try {
@@ -55,6 +59,7 @@ class ApiClient(
             return ApiResult.Err(ErrKind.UNREACHABLE, "Cannot open connection.")
         }
         try {
+            if (conn is HttpsURLConnection && tls != null) { conn.sslSocketFactory = tls.socketFactory; conn.hostnameVerifier = tls.hostnameVerifier }
             conn.connectTimeout = connectTimeoutMs()
             conn.readTimeout = readTimeoutMs()
             conn.requestMethod = method
@@ -73,7 +78,7 @@ class ApiClient(
             }
             val code = conn.responseCode
             val latency = (System.nanoTime() - started) / 1_000_000
-            if (code == 401 || code == 403) return ApiResult.Err(ErrKind.UNAUTHORIZED, "unauthorized", code)
+            if (code == 401 || code == 403) return ApiResult.Err(ErrKind.UNAUTHORIZED, if (bearer == null) "pairing" else "unauthorized", code)
             if (code == 429) return ApiResult.Err(ErrKind.RATE_LIMITED, "rate limited", code)
             if (code !in 200..299) {
                 val msg = conn.errorStream?.let { readCapped(it) }?.let { safeError(it) } ?: ""
@@ -87,6 +92,8 @@ class ApiClient(
             }
         } catch (e: SocketTimeoutException) {
             return ApiResult.Err(ErrKind.TIMEOUT, "timeout")
+        } catch (e: SSLException) {
+            return ApiResult.Err(ErrKind.UNTRUSTED, "untrusted")
         } catch (e: ConnectException) {
             return ApiResult.Err(ErrKind.UNREACHABLE, "refused")
         } catch (e: NoRouteToHostException) {
@@ -102,6 +109,55 @@ class ApiClient(
         } finally {
             conn.disconnect()
         }
+    }
+
+    /** Sends a file as the request body. Streams from [input], so large files never sit in memory. */
+    fun upload(url: String, input: InputStream, length: Long, bearer: String, tls: PinnedTls?): ApiResult {
+        val conn = try { URL(url).openConnection() as HttpURLConnection } catch (e: Exception) { return ApiResult.Err(ErrKind.BAD_ADDRESS, "Invalid address.") }
+        try {
+            if (conn is HttpsURLConnection && tls != null) { conn.sslSocketFactory = tls.socketFactory; conn.hostnameVerifier = tls.hostnameVerifier }
+            conn.connectTimeout = connectTimeoutMs(); conn.readTimeout = 60_000
+            conn.requestMethod = "PUT"; conn.useCaches = false; conn.doOutput = true
+            conn.setRequestProperty("Authorization", "Bearer $bearer")
+            conn.setRequestProperty("Content-Type", "application/octet-stream")
+            conn.setFixedLengthStreamingMode(length)
+            conn.outputStream.use { out -> input.use { it.copyTo(out, 16384) } }
+            val code = conn.responseCode
+            if (code == 401 || code == 403) return ApiResult.Err(ErrKind.UNAUTHORIZED, "unauthorized", code)
+            if (code !in 200..299) return ApiResult.Err(ErrKind.HTTP, conn.errorStream?.let { readCapped(it) }?.let { safeError(it) } ?: "", code)
+            return ApiResult.Ok(try { JSONObject(readCapped(conn.inputStream)) } catch (e: JSONException) { JSONObject() }, 0)
+        } catch (e: SocketTimeoutException) { return ApiResult.Err(ErrKind.TIMEOUT, "timeout")
+        } catch (e: SSLException) { return ApiResult.Err(ErrKind.UNTRUSTED, "untrusted")
+        } catch (e: IOException) { return ApiResult.Err(ErrKind.UNREACHABLE, e.javaClass.simpleName)
+        } finally { conn.disconnect() }
+    }
+
+    /** Copies a file from the PC into [out]. */
+    fun download(url: String, out: java.io.OutputStream, bearer: String, tls: PinnedTls?, maxBytes: Long = 2_000_000_000L): ApiResult {
+        val conn = try { URL(url).openConnection() as HttpURLConnection } catch (e: Exception) { return ApiResult.Err(ErrKind.BAD_ADDRESS, "Invalid address.") }
+        try {
+            if (conn is HttpsURLConnection && tls != null) { conn.sslSocketFactory = tls.socketFactory; conn.hostnameVerifier = tls.hostnameVerifier }
+            conn.connectTimeout = connectTimeoutMs(); conn.readTimeout = 60_000
+            conn.useCaches = false
+            conn.setRequestProperty("Authorization", "Bearer $bearer")
+            val code = conn.responseCode
+            if (code == 401 || code == 403) return ApiResult.Err(ErrKind.UNAUTHORIZED, "unauthorized", code)
+            if (code !in 200..299) return ApiResult.Err(ErrKind.HTTP, conn.errorStream?.let { readCapped(it) }?.let { safeError(it) } ?: "", code)
+            var total = 0L
+            conn.inputStream.use { s ->
+                val buf = ByteArray(16384)
+                while (true) {
+                    val n = s.read(buf); if (n < 0) break
+                    total += n
+                    if (total > maxBytes) throw IOException("file too large")
+                    out.write(buf, 0, n)
+                }
+            }
+            return ApiResult.Ok(JSONObject().put("bytes", total), 0)
+        } catch (e: SocketTimeoutException) { return ApiResult.Err(ErrKind.TIMEOUT, "timeout")
+        } catch (e: SSLException) { return ApiResult.Err(ErrKind.UNTRUSTED, "untrusted")
+        } catch (e: IOException) { return ApiResult.Err(ErrKind.UNREACHABLE, e.javaClass.simpleName)
+        } finally { conn.disconnect() }
     }
 
     private fun safeError(text: String): String = try {

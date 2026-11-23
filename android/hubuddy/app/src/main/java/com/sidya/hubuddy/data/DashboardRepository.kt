@@ -88,6 +88,8 @@ class DashboardRepository(
     val registry: PcRegistry,
     private val pcPool: ScheduledExecutorService = Executors.newScheduledThreadPool(4) { r -> Thread(r, "hubuddy-pc").apply { isDaemon = true } },
     private val netExec: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "hubuddy-net").apply { isDaemon = true } },
+    /** What the PC may show about this phone (battery, network). Empty when the provider has nothing to say. */
+    private val phoneStatus: () -> JSONObject = { JSONObject() },
 ) {
     @Volatile var state = DashState()
         private set
@@ -219,6 +221,7 @@ class DashboardRepository(
                                 cpuHistory = if (cpu == null) it.cpuHistory else (it.cpuHistory + cpu).takeLast(HISTORY))
                         }
                         maybeWriteCache(id, r.json, now)
+                        maybeSendStatus(id, now)
                         autoName(profile, r.json)
                         settings.refreshSec * 1000L
                     }
@@ -239,6 +242,16 @@ class DashboardRepository(
             30_000
         }
         schedulePc(id, gen, delayMs)
+    }
+
+    private val lastStatus = HashMap<String, Long>()
+
+    /** Lets the PC show this phone's battery and network, at most once a minute per PC. Failures are ignored. */
+    private fun maybeSendStatus(id: String, now: Long) {
+        synchronized(lastStatus) { if (now - (lastStatus[id] ?: 0L) < STATUS_EVERY_MS) return; lastStatus[id] = now }
+        val body = try { phoneStatus() } catch (e: Exception) { return }
+        if (body.length() == 0) return
+        pcPool.execute { try { agent.post("/api/phone/status", body, id) } catch (e: Exception) { } }
     }
 
     /** A PC still called "My PC" / "PC 2" takes the computer name it reports. */
@@ -412,6 +425,7 @@ class DashboardRepository(
     }
 
     companion object {
+        const val STATUS_EVERY_MS = 60_000L
         const val GITHUB_TOKEN = "github.token"
         const val HISTORY = 60
         const val WEATHER_EVERY_MS = 30 * 60_000L

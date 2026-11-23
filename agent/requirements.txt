@@ -1,3 +1,6 @@
+# Secure pairing: the per-PC certificate authority and the QR code
+cryptography>=42
+segno>=1.6
 # Core readings (CPU, memory, disk, network)
 psutil>=5.9
 # Calendar feeds (optional: only needed if you configure [calendar] feeds)

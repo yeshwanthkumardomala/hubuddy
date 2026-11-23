@@ -4,26 +4,29 @@ import com.sidya.hubuddy.net.AddressValidator
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** One PC or laptop running the Hubuddy agent. */
+/** One PC or laptop running Hubuddy. [hostId] and [ca] are empty until the PC has been paired. */
 data class PcProfile(
     val id: String,
     val name: String,
-    /** "usb" = adb reverse to 127.0.0.1 (one PC per cable); "wifi" = the PC's LAN address. */
-    val mode: String,
-    val usbPort: Int,
-    val address: String,
+    /** The PC's permanent identity (from its invitation or discovery reply). */
+    val hostId: String = "",
+    /** The PC's certificate authority, base64url DER; the only identity this phone will accept for [hostId]. */
+    val ca: String = "",
+    /** Where it was last seen, "ip:port". Re-found automatically by [hostId] when it changes. */
+    val address: String = "",
+    /** For Wake-on-LAN, when the PC told us. */
+    val mac: String = "",
 ) {
-    fun endpoint(): String = if (mode == "usb") "127.0.0.1:$usbPort" else address
+    fun endpoint(): String = address
 
-    fun toJson(): JSONObject = JSONObject().put("id", id).put("name", name).put("mode", mode)
-        .put("usbPort", usbPort).put("address", address)
+    fun toJson(): JSONObject = JSONObject().put("id", id).put("name", name).put("hostId", hostId).put("ca", ca)
+        .put("address", address).put("mac", mac)
 
     companion object {
         fun fromJson(o: JSONObject): PcProfile? {
             val id = o.optString("id").takeIf { it.matches(Regex("[A-Za-z0-9_-]{1,16}")) } ?: return null
-            return PcProfile(id, o.optString("name", "PC").take(24).ifBlank { "PC" },
-                if (o.optString("mode") == "wifi") "wifi" else "usb",
-                o.optInt("usbPort", AddressValidator.DEFAULT_PORT).coerceIn(1, 65535), o.optString("address", "").trim())
+            return PcProfile(id, o.optString("name", "PC").take(24).ifBlank { "PC" }, o.optString("hostId"), o.optString("ca"),
+                o.optString("address", "").trim(), o.optString("mac"))
         }
     }
 }
@@ -38,7 +41,7 @@ class PcRegistry(private val kv: KeyValue, private val secrets: SecretStore) {
     init {
         synchronized(lock) {
             if (kv.getString(K_LIST) == null) {
-                save(listOf(PcProfile("pc1", "My PC", "usb", AddressValidator.DEFAULT_PORT, "")))
+                save(listOf(PcProfile("pc1", "My PC")))
                 kv.putString(K_ACTIVE, "pc1")
             }
         }
@@ -49,7 +52,7 @@ class PcRegistry(private val kv: KeyValue, private val secrets: SecretStore) {
             val a = JSONArray(kv.getString(K_LIST) ?: "[]")
             (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(PcProfile::fromJson) }.take(MAX_PCS)
         } catch (e: Exception) { emptyList() }
-    }.ifEmpty { listOf(PcProfile("pc1", "My PC", "usb", AddressValidator.DEFAULT_PORT, "")) }
+    }.ifEmpty { listOf(PcProfile("pc1", "My PC")) }
 
     fun get(id: String): PcProfile? = list().firstOrNull { it.id == id }
 
@@ -61,15 +64,43 @@ class PcRegistry(private val kv: KeyValue, private val secrets: SecretStore) {
 
     val canAdd: Boolean get() = list().size < MAX_PCS
 
-    /** Adds a PC and returns it, or null at the limit. */
-    fun add(name: String? = null, mode: String = "wifi"): PcProfile? = synchronized(lock) {
+    /** Adds an empty PC and returns it, or null at the limit. */
+    fun add(name: String? = null): PcProfile? = synchronized(lock) {
         val all = list()
         if (all.size >= MAX_PCS) return null
         var n = all.size + 1
         while (all.any { it.id == "pc$n" }) n++
-        val p = PcProfile("pc$n", (name?.trim()?.take(24)?.takeIf { it.isNotEmpty() } ?: "PC $n"), mode, AddressValidator.DEFAULT_PORT, "")
+        val p = PcProfile("pc$n", (name?.trim()?.take(24)?.takeIf { it.isNotEmpty() } ?: "PC $n"))
         save(all + p)
         p
+    }
+
+    /**
+     * Records a PC that has just been paired. The same PC (by [PcProfile.hostId]) is updated in place, an unpaired
+     * placeholder is filled, otherwise a new entry is added. Returns null at the limit.
+     */
+    fun upsertPaired(hostId: String, name: String, ca: String, address: String, mac: String): PcProfile? = synchronized(lock) {
+        val all = list()
+        val existing = all.firstOrNull { it.hostId == hostId } ?: all.firstOrNull { it.hostId.isEmpty() && !isPaired(it.id) }
+        if (existing != null) {
+            val p = existing.copy(hostId = hostId, ca = ca, address = address, mac = mac.ifEmpty { existing.mac },
+                name = if (existing.hostId == hostId) existing.name else uniqueName(all, name.trim().take(24).ifBlank { "PC" }))
+            save(all.map { if (it.id == p.id) p else it })
+            return p
+        }
+        if (all.size >= MAX_PCS) return null
+        var n = all.size + 1
+        while (all.any { it.id == "pc$n" }) n++
+        val p = PcProfile("pc$n", uniqueName(all, name.trim().take(24).ifBlank { "PC" }), hostId, ca, address, mac)
+        save(all + p)
+        p
+    }
+
+    private fun uniqueName(all: List<PcProfile>, wanted: String): String {
+        if (all.none { it.name.equals(wanted, true) }) return wanted
+        var i = 2
+        while (all.any { it.name.equals("$wanted $i", true) }) i++
+        return "$wanted $i"
     }
 
     fun update(p: PcProfile) = synchronized(lock) {

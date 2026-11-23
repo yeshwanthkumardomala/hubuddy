@@ -11,6 +11,7 @@ import com.sidya.hubuddy.ui.LoginActivity
 import com.sidya.hubuddy.ui.MainActivity
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -156,7 +157,7 @@ class UiFlowTest {
             assertNotNull("tab $tab shows $marker", m.byTag<View>(marker))
         }
         m.byTag<View>("nav_AI")!!.performClick()
-        assertTrue(allText(m.window.decorView).contains("Claude Code agent not connected."))
+        assertTrue(allText(m.window.decorView).contains("Claude Code is not connected."))
     }
 
     @Test fun secondaryPagesOpenAndBackReturns() {
@@ -173,27 +174,36 @@ class UiFlowTest {
         assertNotNull(m.byTag<View>("net_phone"))
     }
 
-    @Test fun settingsRejectsPublicAddressAndPersistsValidOne() {
+    @Test fun connectionTestRequiresPairingThenReportsDeadPcWithoutCrash() {
         val m = loggedInMain()
-        m.byTag<View>("nav_Settings")!!.performClick()
-        m.byTag<View>("mode_wifi")!!.performClick()
-        m.byTag<EditText>("wifiAddress")!!.setText("8.8.8.8:8765")
-        m.byTag<View>("saveConn")!!.performClick()
-        assertTrue(m.byTag<TextView>("connMessage")!!.text.contains("Only local addresses"))
-        assertEquals("usb", app().pcs.active().mode)
-
-        m.byTag<EditText>("wifiAddress")!!.setText("192.168.1.100:8765")
-        m.byTag<View>("saveConn")!!.performClick()
-        assertEquals("wifi", app().pcs.active().mode)
-        assertEquals("192.168.1.100:8765", app().pcs.active().endpoint())
-    }
-
-    @Test fun connectionTestToDeadAgentShowsErrorWithoutCrash() {
-        val m = loggedInMain()
-        app().pcs.update(app().pcs.active().copy(mode = "usb", usbPort = java.net.ServerSocket(0).use { it.localPort }))
         m.byTag<View>("nav_Settings")!!.performClick()
         m.byTag<View>("testConn")!!.performClick()
-        waitFor(8000) { m.byTag<TextView>("connMessage")!!.text.contains("unreachable") }
+        assertTrue(m.byTag<TextView>("connMessage")!!.text.contains("Pair this PC first"))
+        val dead = java.net.ServerSocket(0).use { it.localPort }
+        app().pairActivePc(dead)
+        m.rerender()
+        m.byTag<View>("testConn")!!.performClick()
+        waitFor(8000) { m.byTag<TextView>("connMessage")!!.text.contains("Cannot reach the PC") }
+    }
+
+    @Test fun pairingByPastedInvitationWorksEndToEnd() {
+        val server = MiniHttpServer { req ->
+            if (req.path == "/api/pairing/claim") 200 to """{"ok":true,"token":"${"p".repeat(43)}"}""" else 404 to "{}"
+        }.start()
+        try {
+            val m = loggedInMain()
+            m.pairing.pair(invitationText(TestPki.A, server.port))
+            waitFor(8000) { app().agent.isPaired("pc1") }
+            assertEquals(TestPki.A.hostId, app().pcs.get("pc1")!!.hostId)
+        } finally { server.stop() }
+    }
+
+    @Test fun badInvitationsAreExplainedAndNothingIsPaired() {
+        val m = loggedInMain()
+        m.pairing.pair("hello")
+        m.pairing.pair(invitationText(TestPki.A, 9, expires = System.currentTimeMillis() - 1))
+        m.pairing.pair(invitationText(TestPki.A, 9, address = "8.8.8.8"))
+        assertFalse(app().agent.isPaired("pc1"))
     }
 
     @Test fun logoutReturnsToLogin() {
