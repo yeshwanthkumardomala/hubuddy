@@ -54,7 +54,7 @@ Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Py
 * **Debian 12 compatibility, verified here with the same versions Debian 12 ships:** Python 3.11 and `cryptography` 38 pass the core, server,
   remote and Linux suites (this caught and fixed three newer-library calls in the certificate code).
 * **The .deb:** built, inspected, unpacked into a scratch root and run: `hubuddy --selftest` passes 20 of 20; idle it used about 38 MB of memory and about 0.15% of a CPU core
-  (3 threads). CI repeats the install on clean 64-bit and 32-bit Debian 12 containers and runs the agent tests there.
+  (3 threads). CI repeats the install on a clean 64-bit Debian 12 container and runs the agent tests there (passed in CI). A 32-bit container run is best-effort and failed on CI networking, so 32-bit is **not verified**.
 * **Linux command builders:** every `xdotool`, `systemctl`, `shutdown`, `xclip`, `wl-copy` and `xsel` call is a fixed argument list with no shell (text is data on stdin or after `--`);
   missing tools are reported as unavailable; a failing command is unavailable, not a crash; the window falls back to the terminal when Tk or a display is missing.
 * **Not verified:** a real Linux desktop (X11/Wayland input, audio, systemd user sessions), real old hardware speed, Android 4.4 (not supported).

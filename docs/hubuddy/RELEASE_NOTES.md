@@ -33,8 +33,8 @@
 * **Not available on Linux yet:** now-playing and media buttons, GitHub/Windows-only extras, a Wayland-native input backend (X11 is supported; on Wayland remote input needs XWayland or is reported unavailable),
   `.rpm`, Flatpak and Snap packages.
 * **Phones:** Android 5.0+ as before. **Android 4.4 and older are not supported** (no usable TLS 1.2 and no safe key storage there); iPhone is not supported.
-* **Not verified:** a real old PC, a real desktop session (X11 or Wayland input, audio, systemd user sessions). CI installs the package on clean
-  64-bit and 32-bit Debian 12 containers, runs the self-test and the tests there; the 32-bit result is in the release's CI run.
+* **Not verified:** a real old PC, a real desktop session (X11 or Wayland input, audio, systemd user sessions). CI installs the package on a clean
+  64-bit Debian 12 container (Debian's own Python 3.11 and cryptography 38) and runs the self-test and the whole test suite there. A 32-bit run is attempted but is best-effort (the CI network for 32-bit containers failed), so 32-bit and ARM are supported by design (pure Python) but **not verified**.
 
 ## 3.1.0 — Remote control and Wake (2026-11-23)
 
