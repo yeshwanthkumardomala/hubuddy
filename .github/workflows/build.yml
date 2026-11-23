@@ -1,0 +1,123 @@
+name: build
+
+on:
+  push:
+    branches: [feature/hubuddy-app, main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows program and installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: agent/requirements.txt
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r agent/requirements.txt pyinstaller
+      - name: Agent tests
+        working-directory: agent
+        run: |
+          $env:PYTHONPATH = "tests;."
+          python -m unittest discover -s tests -v
+      - name: Build Hubuddy.exe
+        run: pyinstaller --noconfirm --distpath dist --workpath build/pyi agent/hubuddy.spec
+      - name: Self-test the portable program
+        run: |
+          $p = Start-Process -FilePath dist\Hubuddy.exe -ArgumentList "--selftest","--selftest-output","$PWD\selftest-portable.json" -Wait -PassThru
+          Get-Content selftest-portable.json
+          if ($p.ExitCode -ne 0) { throw "self-test failed ($($p.ExitCode))" }
+      - name: Build the installer
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\Hubuddy.iss "/DAppVersion=3.0.0" "/DSourceExe=$PWD\dist\Hubuddy.exe"
+      - name: Install silently, self-test the installed program, uninstall
+        run: |
+          $dir = "$env:RUNNER_TEMP\HubuddyInstalled"
+          $i = Start-Process -FilePath dist\HubuddySetup.exe -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/TASKS=firewall","/DIR=$dir" -Wait -PassThru
+          if ($i.ExitCode -ne 0) { throw "installer failed ($($i.ExitCode))" }
+          netsh advfirewall firewall show rule name=Hubuddy
+          $p = Start-Process -FilePath "$dir\Hubuddy.exe" -ArgumentList "--selftest","--selftest-output","$PWD\selftest-installed.json" -Wait -PassThru
+          Get-Content selftest-installed.json
+          if ($p.ExitCode -ne 0) { throw "installed self-test failed ($($p.ExitCode))" }
+          $u = Start-Process -FilePath "$dir\unins000.exe" -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES" -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "uninstall failed ($($u.ExitCode))" }
+          if (Test-Path "$dir\Hubuddy.exe") { throw "uninstall left the program behind" }
+      - name: Checksums
+        run: |
+          Get-FileHash dist\Hubuddy.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  Hubuddy.exe" } | Set-Content dist\Hubuddy.exe.sha256
+          Get-FileHash dist\HubuddySetup.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  HubuddySetup.exe" } | Set-Content dist\HubuddySetup.exe.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hubuddy-windows
+          path: |
+            dist/Hubuddy.exe
+            dist/HubuddySetup.exe
+            dist/*.sha256
+            selftest-*.json
+
+  android:
+    name: Android app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Agent requirements (for the interop test)
+        run: pip install -r agent/requirements.txt
+      - name: Unit tests, lint and release build
+        working-directory: android/hubuddy
+        run: ./gradlew testDebugUnitTest lintDebug assembleRelease --no-daemon
+      - name: Interop test (real app client against the real PC program)
+        run: bash tools/interop.sh
+      - name: Checksum
+        run: |
+          cp android/hubuddy/app/build/outputs/apk/release/app-release.apk Hubuddy.apk
+          sha256sum Hubuddy.apk | sed 's/Hubuddy.apk/Hubuddy.apk/' > Hubuddy.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hubuddy-android
+          path: |
+            Hubuddy.apk
+            Hubuddy.apk.sha256
+            android/hubuddy/app/build/reports/tests/testDebugUnitTest
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          ver="${tag#v}"
+          mv assets/hubuddy-android/Hubuddy.apk "assets/Hubuddy-${ver}.apk"
+          mv assets/hubuddy-android/Hubuddy.apk.sha256 "assets/Hubuddy-${ver}.apk.sha256" || true
+          mv assets/hubuddy-windows/Hubuddy.exe "assets/Hubuddy-${ver}.exe"
+          mv assets/hubuddy-windows/HubuddySetup.exe "assets/HubuddySetup-${ver}.exe"
+          (cd assets && sha256sum Hubuddy-${ver}.apk Hubuddy-${ver}.exe HubuddySetup-${ver}.exe > SHA256SUMS.txt)
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "Hubuddy ${ver}" --generate-notes \
+            "assets/Hubuddy-${ver}.apk" "assets/Hubuddy-${ver}.exe" "assets/HubuddySetup-${ver}.exe" assets/SHA256SUMS.txt
