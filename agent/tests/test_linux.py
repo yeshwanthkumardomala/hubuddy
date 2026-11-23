@@ -136,6 +136,6 @@ class HiddenProcesses(unittest.TestCase):
         for f in list(root.glob("*.py")) + list(root.glob("collectors/*.py")):
             if f.name in allowed:
                 continue
-            text = f.read_text()
+            text = f.read_text(encoding="utf-8")
             self.assertNotIn("subprocess.run(", text, f.name)
             self.assertNotIn("subprocess.Popen(", text.replace("collectors/shortcuts", ""), f.name) if f.name != "shortcuts.py" else None
