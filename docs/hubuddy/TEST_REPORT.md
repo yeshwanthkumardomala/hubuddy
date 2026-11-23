@@ -1,62 +1,65 @@
-# Test report — Hubuddy 2.0.0
+# Test report — Hubuddy 3.0.0
 
-Date: 2026-11-23. Environment: Linux build container, OpenJDK 21, Gradle 8.14, AGP 8.7, Kotlin 2.0, Android SDK
-Platform 34, Robolectric 4.14, Python 3.13.
+Date: 2026-11-23. Environments: Linux build container (OpenJDK 21, Gradle 8.14, AGP 8.7, Kotlin 2.0, Android SDK Platform 34,
+Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Python 3.12) for the PC program.
 
-> **Physical phone testing: PENDING.** No phone was attached and the container cannot run an emulator, so the
-> Android behaviour was tested with Robolectric on **Android 5.0, 5.1, 7.0, 8.0, 9, 11 and 14**. The Windows
-> PowerShell scripts and the Windows-only agent parts were **not run** (see "Not run").
+> **Physical phone testing: PENDING.** No phone was attached and the container cannot run an emulator, so the Android
+> behaviour was tested with Robolectric on **Android 5.0, 5.1, 7.0, 8.0, 9, 11 and 14**, and the app's real network code was
+> run against the real PC program (interop test). The camera, USB tethering, the Keystore on a device and firewalls on a real
+> network were **not** exercised.
 
 ## Summary
 
 | Suite | Result |
 | --- | --- |
-| Android build (debug + release APK) | ✅ successful |
-| Android unit + Robolectric UI tests | ✅ **173 run, 0 failed, 0 skipped** (includes 12 screenshot renders) |
-| Android Lint | ✅ 0 errors, 2 expected warnings (`InsecureBaseConfiguration`: plain HTTP to a LAN agent is allowed by design and limited in code; `UnusedAttribute`: `networkSecurityConfig` is ignored below Android 7) |
-| Colour contrast in Dark, Black and Light | ✅ text 7:1, secondary text and button labels 4.5:1, accent and status colours 3:1 |
-| APK inspection | ✅ `com.sidya.hubuddy`, version 2.0.0, minSdk 21, INTERNET + ACCESS_NETWORK_STATE only, no native code |
-| Agent tests | ✅ **48 passed** with the optional libraries installed; ✅ 48 run (41 passed, 7 skipped for missing libraries) without them |
-| Agent run end to end (Linux) | ✅ started the real program, paired with a one-time code, read live stats and network data, 401 without a token |
-| Laptop agent download (zip) | ✅ rebuilt twice with identical checksums; unzipped into a fresh folder and run from there: paired, live stats and network readings, web dashboard served; no old-name hits; start scripts have Windows line endings |
-| Web dashboard in headless Chromium | ✅ pairs and renders; phone-width layout without horizontal scroll |
+| PC program tests (Python) | ✅ **101 pass** on Linux and on **real Windows** (CI) |
+| `Hubuddy.exe --selftest` (20 checks: QR + PIN pairing, API, messages, files, discovery, forget) | ✅ passes as a Linux binary here, and as the **portable and the installed Windows program** in CI |
+| Windows installer | ✅ built, **installed silently, self-tested, uninstalled cleanly** on a Windows runner |
+| Android unit + Robolectric UI tests | ✅ **206 run, 0 failed** (13 skipped: 12 screenshot renders and the interop test unless a PC program runs) |
+| Interop test (`tools/interop.sh`): the app's real client against the real PC program | ✅ QR pairing, replay refused, identity pinned, inbox both ways, files both ways, traversal refused, PIN pairing with matching compare code, wrong PIN refused, forget signs the phone out |
+| Android Lint | ✅ 0 errors (one real finding fixed: a call missing before Android 7) |
+| Builds | ✅ debug and release APK, `com.sidya.hubuddy` 3.0.0, minSdk 21, INTERNET + ACCESS_NETWORK_STATE + CAMERA (camera optional) |
+| Agent packaged with PyInstaller | ✅ the packaged program serves its bundled web files and passes its self-test |
 
-## Android tests
+## What the pairing tests cover
 
-* **Authentication (AuthManager, PinHasher):** login, wrong PIN, lockout and its growth, forced PIN change, weak PIN
-  refusal, persistence across restart, inactivity timeout, logout, PBKDF2 checked against RFC 7914 and the JDK.
-* **Connectivity (DashboardRepository, AddressValidator):** against a real local HTTP server: pairing, timeout,
-  reconnect after an outage, bad token, public or invalid addresses refused, offline cache after a restart, back-off.
-* **Several PCs (PcRegistry, MultiPcUi):** up to 8, separate tokens, three PCs polled together with one dead,
-  All PCs tiles, selecting a PC, adding/editing/removing in Settings.
-* **UI flows on Android 5.0 to 14:** login, PIN change, five tabs, secondary pages, offline state, live data on every
-  tab, malformed data on every tab without a crash, settings validation, rotation, theme switching, and
-  portrait vs landscape layout (bottom bar and 1 column vs side rail and 2 columns).
-* **Dock mode:** starts after idle time, also on battery but not at 12%, stops itself at 10%, rotates through pages,
-  jumps to Claude alerts, night dim clock, touch leaves, expired session needs the PIN, malformed data.
-* **Android 5.x without a Keystore:** secrets stay in memory and are never written to preferences.
+* **Certificates:** a valid chain with the signed name, renewal that keeps the same authority and fingerprint, a replaced or missing
+  identity detected rather than silently recreated, damaged files with recovery messages.
+* **Invitations and PINs:** single use, expiry, replacement by a newer one, bad shapes, wrong PC id, lockout after repeated
+  failures (and that a locked client cannot pair even with a good invitation), the host-wide budget, and the compare code
+  producing the **same value on the phone and the PC** (shared test vectors, checked in both languages).
+* **Pinned TLS (app):** accepts the right authority and name; rejects another authority, the right authority with the wrong PC name,
+  and anything when the phone's own trust store is the only trust; a paired PC whose identity changed is refused.
+* **Server:** plain HTTP on the TLS port gets nothing, unknown `Host` refused, wrong method/path/malformed bodies, 32-phone cap,
+  keep-alive across many requests, garbage and oversize input, loopback page checks (DNS-rebinding names, foreign origins,
+  missing local-action header), file name sanitising, size limits, no partial files, no symlinks, no traversal.
+* **Discovery:** only the exact probe is answered, replies are rate limited and carry no secret; the app ignores malformed or
+  non-local replies; address changes are followed by host id.
+* **QR:** a real invitation-sized QR is decoded from a synthetic camera frame; blank frames decode to nothing.
 
-## Agent tests (48)
+## Real bugs found by testing
 
-* **System:** real readings, GPU parsing and absence, GPU asked at a sensible rate.
-* **Claude Code:** token totals, duplicate lines, model split, 5-hour blocks, incremental reading with a half-written
-  line, expired limits dropped, hook states and alerts, dismissal, expiry, path-character safety, status line
-  recording and chaining, settings install/uninstall (backup, existing hooks kept, no duplicates, bad JSON refused).
-* **Calendar:** repeating and all-day events, a failing feed skipped, local files. **GitHub:** summary, streaks, errors.
-* **Network:** latency, jitter, loss, real TCP probes, persisted counters, speed test against a local server.
-* **Shortcuts:** validation of every action, dispatch, no shell use, button limit. **Media:** session mapping and commands with fakes.
-* **Server:** pairing, token hashing, rate limits, command validation, malformed bodies, path traversal, peer filtering.
-* These tests found and fixed real bugs: app names like "Spotify.exe" came out as "exe", and Windows project paths were not split on Linux.
+* On **real Windows**, a refused request whose body was still unread made the connection reset before the reply arrived (Linux hid
+  this). Fixed: small unused bodies are read first, large ones are discarded briefly after replying; covered by two tests.
+* Lint: `HashMap.putIfAbsent` does not exist before Android 7 (the app supports Android 5).
+* Tests: the JDK's TLS server and Robolectric's security provider clash during one-time initialisation, which made results depend on
+  test order; the test server now hides that provider while it is created.
+
+## Earlier suites (unchanged behaviour)
+
+Authentication and PIN hashing, dashboard polling and offline cache, several PCs, UI flows on Android 5.0 to 14, dock mode,
+Android 5.x without a Keystore, colour contrast in every look, and the collectors for system, Claude Code, calendar, GitHub,
+network, shortcuts and media. See the 2.0.0 notes in the release history.
 
 ## Not run / pending
 
-1. **A physical phone** (install, Keystore on the device, real USB and Wi-Fi connection, screen size, battery behaviour,
-   whether dock mode starts as expected after 5 idle minutes).
+1. **A physical phone:** install, camera QR scanning on real cameras, Keystore on the device, USB tethering, how discovery behaves
+   on your own router (guest Wi-Fi isolation and some mesh systems block it), battery behaviour, dock mode timing.
 2. **Android emulator / instrumentation tests:** not possible without KVM here.
-3. **`build.ps1` and `start-agent.ps1`:** written for Windows PowerShell 5.1 and 7 but never executed (PowerShell could not be installed here).
-4. **Windows-only agent parts:** media through `winrt`, key presses, locking and volume, reading a real NVIDIA GPU,
-   and the whole agent on Windows. They were written carefully and unit-tested with fakes only.
-5. **Claude Code hooks against a real Claude Code:** tested with the hook and status-line JSON as Claude Code documents it,
-   not with a live session.
-6. **Release APK at runtime:** it builds, but the tests ran against the unshrunk debug build.
-7. **Android 5.0 to 7.0 HTTPS** to weather and GitHub may fail on old certificate stores; PC data is unaffected.
+3. **The Windows window (tkinter):** it starts and its background program is tested, but a human has not looked at it on a screen.
+   The firewall helper and the "start with Windows" setting are covered by command-building tests and the installer's rule, not by a
+   user session. The installer's firewall rule was created in CI but not verified against a real phone.
+4. **`build.ps1` and `start-agent.ps1`:** written for Windows PowerShell but never executed.
+5. **Claude Code hooks against a real Claude Code, real NVIDIA GPU, key presses and media on a user desktop.**
+6. **Release APK at runtime:** it builds and passes lint, but the tests ran against the debug build.
+7. **SmartScreen:** the programs are unsigned.
