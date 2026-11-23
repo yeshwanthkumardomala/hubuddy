@@ -22,6 +22,7 @@ jobs:
   windows:
     name: Windows program and installer
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,7 +38,8 @@ jobs:
         working-directory: agent
         run: |
           $env:PYTHONPATH = "tests;."
-          python -m unittest discover -s tests -v
+          # if a test ever hangs, print where every thread is stuck after 150 s and stop, instead of waiting for hours
+          python -c "import faulthandler, unittest; faulthandler.dump_traceback_later(150, exit=True); unittest.main(module=None, argv=['x', 'discover', '-s', 'tests', '-v'])"
       - name: Build Hubuddy.exe
         run: pyinstaller --noconfirm --distpath dist --workpath build/pyi agent/hubuddy.spec
       - name: Run the built program (tray mode), check its page, take a picture of it, quit it from the page

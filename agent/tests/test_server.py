@@ -210,9 +210,11 @@ class LocalPage(AgentCase):
         self.assertTrue(self.agent.server._local.sockets[0].getsockname()[0] in ("127.0.0.1", "::1") if hasattr(self.agent.server, "_local") else True)
 
     def test_system_routes_for_the_window(self):
-        self.assertEqual(self.agent.local("GET", "/local/system")[1]["windows"], False)
+        import sys
+        self.assertEqual(self.agent.local("GET", "/local/system")[1]["windows"], sys.platform == "win32")
         self.assertEqual(self.agent.local("POST", "/local/autostart", {"on": "yes"})[0], 400)
-        self.assertEqual(self.agent.local("POST", "/local/autostart", {"on": True})[0], 501)   # not Windows
+        if sys.platform != "win32":    # on Windows this would really change the startup setting of the machine running the tests
+            self.assertEqual(self.agent.local("POST", "/local/autostart", {"on": True})[0], 501)
         self.assertEqual(self.agent.local("POST", "/local/quit")[0], 501)                       # started from a terminal
         quit_called = []
         self.agent.server.on_quit = lambda: quit_called.append(1)
