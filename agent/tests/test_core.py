@@ -26,7 +26,7 @@ class IdentityAndTls(unittest.TestCase):
         ca = x509.load_pem_x509_certificate(m.ca_pem.encode())
         self.assertTrue(ca.extensions.get_extension_for_class(x509.BasicConstraints).value.ca)
         leaf = x509.load_pem_x509_certificate(m._rec["cert"].encode())
-        leaf.verify_directly_issued_by(ca)
+        tls.issued_by(leaf, ca)
         names = leaf.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
         self.assertEqual(names, [f"host-{hid}.hubuddy.invalid"])
         self.assertEqual(len(m.pin), 64)

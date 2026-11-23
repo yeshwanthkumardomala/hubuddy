@@ -18,6 +18,24 @@ from .server import AgentServer
 DEFAULT_LOCAL_PORT = 8766
 
 
+def firewall_help(port: int, udp: int = discovery.PORT) -> str:
+    """Commands for the common Linux firewalls. Nothing is run; open the ports to your private network only."""
+    return f"""Hubuddy needs these ports reachable from your private network (never from the internet):
+  TCP {port}   phones talk to this PC (encrypted)
+  UDP {udp}  phones find this PC on the network
+
+ufw (Debian/Ubuntu), replace 192.168.0.0/16 with your own network if it differs:
+  sudo ufw allow from 192.168.0.0/16 to any port {port} proto tcp
+  sudo ufw allow from 192.168.0.0/16 to any port {udp} proto udp
+
+firewalld (Fedora/RHEL):
+  sudo firewall-cmd --permanent --zone=home --add-port={port}/tcp --add-port={udp}/udp
+  sudo firewall-cmd --reload
+
+nftables or iptables: allow the same two ports from your LAN range only.
+If no firewall is active you need to do nothing. USB tethering networks are usually 192.168.42.0/24."""
+
+
 def web_dir() -> pathlib.Path:
     base = pathlib.Path(getattr(sys, "_MEIPASS", pathlib.Path(__file__).resolve().parent.parent))
     return base / "web"
@@ -70,9 +88,13 @@ def main(argv=None):
     ap.add_argument("--forget", metavar="ID|all")
     ap.add_argument("--selftest", action="store_true", help="run the full pairing and API flow against this program and exit")
     ap.add_argument("--selftest-output", help="write the self-test result (JSON) to this file")
+    ap.add_argument("--firewall-help", action="store_true", help="print the firewall commands that let phones on your private network reach this PC")
     ap.add_argument("--verbose", "-v", action="store_true")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    if args.firewall_help:
+        print(firewall_help(args.port or 8765))
+        return
     if args.selftest:
         from .selftest import run
         return run(args.selftest_output)

@@ -1,5 +1,6 @@
 """The Hubuddy window for Windows: runs the agent, shows who is paired, and starts pairing with one click."""
 import asyncio
+import os
 import queue
 import sys
 import threading
@@ -62,8 +63,17 @@ def main(argv=None) -> int:
         out = argv[argv.index("--selftest-output") + 1] if "--selftest-output" in argv else None
         return run(out)
     minimized = "--minimized" in argv
-    import tkinter as tk
-    from tkinter import messagebox, ttk
+    try:
+        import tkinter as tk
+        from tkinter import messagebox, ttk
+        if sys.platform.startswith("linux") and not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+            raise ImportError("no display")
+    except ImportError as e:
+        # Minimal Linux installs and servers have no Tk or no desktop: run the same program without a window.
+        print(f"No desktop window available ({e}); running without one. Pair a phone with the QR code below "
+              "or open http://127.0.0.1:8766/ in a browser on this PC.", file=sys.stderr)
+        from .__main__ import main as cli
+        return cli(["--show-invite"] + [a for a in argv if a not in ("--minimized",)])
 
     root = tk.Tk()
     root.title(f"Hubuddy {VERSION}")

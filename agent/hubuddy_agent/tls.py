@@ -23,6 +23,29 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
+def _utc(d: dt.datetime) -> dt.datetime:
+    return d if d.tzinfo else d.replace(tzinfo=dt.timezone.utc)
+
+
+def not_after(c: x509.Certificate) -> dt.datetime:
+    """Expiry as an aware UTC time. cryptography before 42 (Debian 12 ships 38) has only the naive `not_valid_after`."""
+    return c.not_valid_after_utc if hasattr(c, "not_valid_after_utc") else _utc(c.not_valid_after)
+
+
+def not_before(c: x509.Certificate) -> dt.datetime:
+    return c.not_valid_before_utc if hasattr(c, "not_valid_before_utc") else _utc(c.not_valid_before)
+
+
+def issued_by(leaf: x509.Certificate, ca: x509.Certificate) -> None:
+    """Raises when [leaf] was not signed by [ca]'s key (the check `verify_directly_issued_by` does from cryptography 40)."""
+    if hasattr(leaf, "verify_directly_issued_by"):
+        leaf.verify_directly_issued_by(ca)
+        return
+    if leaf.issuer != ca.subject:
+        raise ValueError("issuer does not match")
+    ca.public_key().verify(leaf.signature, leaf.tbs_certificate_bytes, ec.ECDSA(leaf.signature_hash_algorithm))
+
+
 from .privatestore import private_dir, write_private, write_private_json
 
 DAY = dt.timedelta(days=1)
@@ -74,7 +97,7 @@ def _new_ca(host_id: str, now: dt.datetime, key=None):
 
 def _new_leaf(host_id: str, ca_key, ca_cert: x509.Certificate, now: dt.datetime):
     key = ec.generate_private_key(ec.SECP256R1())
-    end = min(now + LEAF_DAYS * DAY, ca_cert.not_valid_after_utc)
+    end = min(now + LEAF_DAYS * DAY, not_after(ca_cert))
     cert = (x509.CertificateBuilder().subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, tls_name(host_id))]))
             .issuer_name(ca_cert.subject).public_key(key.public_key()).serial_number(x509.random_serial_number())
             .not_valid_before(now - dt.timedelta(minutes=5)).not_valid_after(end)
@@ -138,7 +161,7 @@ class ManagedTls:
             leaf = x509.load_pem_x509_certificate(r["cert"].encode())
             ca_key = serialization.load_pem_private_key(r["caKey"].encode(), None)
             leaf_key = serialization.load_pem_private_key(r["key"].encode(), None)
-            leaf.verify_directly_issued_by(ca)
+            issued_by(leaf, ca)
             ok = (ca.public_key().public_numbers() == ca_key.public_key().public_numbers()
                   and leaf.public_key().public_numbers() == leaf_key.public_key().public_numbers())
             names = leaf.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(x509.DNSName)
@@ -155,7 +178,7 @@ class ManagedTls:
 
     def _issue_leaf(self, now: dt.datetime):
         ca = x509.load_pem_x509_certificate(self._rec["ca"].encode())
-        if ca.not_valid_after_utc <= now + DAY:
+        if not_after(ca) <= now + DAY:
             raise IdentityError("This computer's identity has expired. Restore its backup, or pair phones again with a new identity.")
         ca_key = serialization.load_pem_private_key(self._rec["caKey"].encode(), None)
         key, cert = _new_leaf(self.host_id, ca_key, ca, now)
@@ -168,16 +191,16 @@ class ManagedTls:
         with self._lock:
             now = self.clock()
             ca = x509.load_pem_x509_certificate(self._rec["ca"].encode())
-            if ca.not_valid_before_utc > now:
+            if not_before(ca) > now:
                 raise IdentityError("This computer's clock is earlier than its trusted identity. Fix the date and time.")
             changed = False
-            if ca.not_valid_after_utc <= now + RENEW_CA_BEFORE:
+            if not_after(ca) <= now + RENEW_CA_BEFORE:
                 key = serialization.load_pem_private_key(self._rec["caKey"].encode(), None)
                 _, renewed = _new_ca(self.host_id, now, key)
                 self._rec["ca"] = _pem_cert(renewed)
                 changed = True
             leaf = x509.load_pem_x509_certificate(self._rec["cert"].encode())
-            if changed or leaf.not_valid_after_utc <= now + RENEW_LEAF_BEFORE or leaf.not_valid_before_utc > now:
+            if changed or not_after(leaf) <= now + RENEW_LEAF_BEFORE or not_before(leaf) > now:
                 self._issue_leaf(now)
                 changed = True
             if changed or self._ctx is None:
@@ -221,7 +244,7 @@ class ManagedTls:
         leaf = x509.load_pem_x509_certificate(self._rec["cert"].encode())
         ca = x509.load_pem_x509_certificate(self._rec["ca"].encode())
         return {"hostId": self.host_id, "tlsName": self.name, "identityDigest": self.pin,
-                "certificateExpires": leaf.not_valid_after_utc.isoformat(), "authorityExpires": ca.not_valid_after_utc.isoformat()}
+                "certificateExpires": not_after(leaf).isoformat(), "authorityExpires": not_after(ca).isoformat()}
 
 
 def client_context(ca_der_b64url: str) -> ssl.SSLContext:

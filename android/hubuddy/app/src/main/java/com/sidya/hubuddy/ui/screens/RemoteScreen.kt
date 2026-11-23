@@ -133,11 +133,11 @@ class RemoteScreen(host: MainActivity) : Screen(host) {
             })
         })
         addView(ui.card("Power", tag = "powerCard") {
-            addView(ui.text("Restart and shut down start a 15-second countdown on the PC; “Cancel” stops it.", 11f, Pal.dim), ui.lp(bottom = 6))
+            addView(ui.text("Restart and shut down start a short countdown on the PC (15 seconds on Windows, 1 minute on Linux); “Cancel” stops it.", 11f, Pal.dim), ui.lp(bottom = 6))
             addView(ui.hbox {
                 listOf(Triple("Sleep", "sleep", false), Triple("Restart", "restart", true), Triple("Shut down", "shutdown", true)).forEach { (label, a, countdown) ->
                     addView(ui.button(label, primary = false, tag = "power_$a") {
-                        host.confirm("$label the PC?", "${app.pcs.active().name} will $label.", label) { post("/api/power", JSONObject().put("action", a), if (countdown) "Starting in 15 seconds." else null) }
+                        host.confirm("$label the PC?", "${app.pcs.active().name} will $label.", label) { post("/api/power", JSONObject().put("action", a), if (countdown) "Starting shortly. Use Cancel to stop it." else null) }
                     }, ui.lp(0, -2, 1f).apply { rightMargin = ui.dp(3) })
                 }
             })

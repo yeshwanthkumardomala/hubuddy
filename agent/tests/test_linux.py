@@ -1,0 +1,100 @@
+import subprocess
+import sys
+import types
+import unittest
+from unittest import mock
+
+from hubuddy_agent import clipboard, remote
+from hubuddy_agent.__main__ import firewall_help
+
+
+class Ran:
+    def __init__(self, code=0):
+        self.cmds = []
+        self.code = code
+
+    def __call__(self, argv, **kw):
+        self.cmds.append((list(argv), kw))
+        return types.SimpleNamespace(returncode=self.code)
+
+
+def have(*names):
+    return lambda n: ("/usr/bin/" + n) if n in names else None
+
+
+class LinuxClipboard(unittest.TestCase):
+    def test_uses_the_first_tool_present_without_a_shell(self):
+        run = Ran()
+        with mock.patch.dict("os.environ", {"WAYLAND_DISPLAY": ""}, clear=False):
+            self.assertTrue(clipboard.set_text_linux("héllo; rm -rf /", which=have("xclip", "wl-copy"), run=run))
+        argv, kw = run.cmds[0]
+        self.assertEqual(argv, ["xclip", "-selection", "clipboard"])
+        self.assertEqual(kw["input"], "héllo; rm -rf /".encode())  # the text is data on stdin, never part of a command
+        self.assertNotIn("shell", kw)
+
+    def test_prefers_wl_copy_on_wayland_and_reports_failure(self):
+        run = Ran()
+        with mock.patch.dict("os.environ", {"WAYLAND_DISPLAY": "wayland-0"}):
+            clipboard.set_text_linux("x", which=have("xclip", "wl-copy"), run=run)
+        self.assertEqual(run.cmds[0][0], ["wl-copy"])
+        self.assertFalse(clipboard.set_text_linux("x", which=have(), run=Ran()))
+        self.assertFalse(clipboard.set_text_linux("x", which=have("xsel"), run=Ran(code=1)))
+
+
+class LinuxRemote(unittest.TestCase):
+    def backend(self, *tools, code=0):
+        run = Ran(code)
+        return remote.LinuxBackend(which=have(*tools), run=run), run
+
+    def test_every_action_is_a_fixed_argument_list(self):
+        be, run = self.backend("xdotool", "systemctl", "shutdown")
+        be.move(5, -3); be.click("right", True); be.scroll(40); be.scroll(-3); be.key("enter", ["ctrl", "shift"]); be.text("a b; $(reboot)")
+        be.power("sleep"); be.power("shutdown"); be.power("abort")
+        cmds = [c for c, _ in run.cmds]
+        self.assertEqual(cmds[0], ["xdotool", "mousemove_relative", "--", "5", "-3"])
+        self.assertEqual(cmds[1][-1], "3"); self.assertIn("--repeat", cmds[1])
+        self.assertEqual(cmds[2][-1], "5"); self.assertEqual(cmds[3][-1], "4")
+        self.assertEqual(cmds[4][-1], "ctrl+shift+Return")
+        self.assertEqual(cmds[5][-2:], ["--", "a b; $(reboot)"])  # typed as text, not interpreted
+        self.assertEqual(cmds[6], ["systemctl", "suspend"])
+        self.assertTrue(cmds[7][0].endswith("shutdown") and "-h" in cmds[7])
+        self.assertTrue(cmds[8][-1] == "-c")
+        for argv in cmds:
+            self.assertIsInstance(argv, list)
+        for _, kw in run.cmds:
+            self.assertNotIn("shell", kw)
+
+    def test_missing_tools_are_reported_not_faked(self):
+        be, _ = self.backend()
+        for call in (lambda: be.move(1, 1), lambda: be.text("x"), lambda: be.power("sleep")):
+            with self.assertRaises(remote.Unavailable) as e:
+                call()
+            self.assertIn("install", str(e.exception))
+
+    def test_a_failing_command_is_unavailable(self):
+        be, _ = self.backend("xdotool", code=1)
+        with self.assertRaises(remote.Unavailable):
+            be.move(1, 1)
+
+    def test_default_backend_on_linux_and_delay(self):
+        with mock.patch.object(sys, "platform", "linux"):
+            self.assertIsInstance(remote.default_backend(), remote.LinuxBackend)
+        self.assertEqual(remote.LinuxBackend.power_delay_s, 60)
+
+
+class Help(unittest.TestCase):
+    def test_firewall_help_names_the_real_ports_and_private_ranges(self):
+        t = firewall_help(18765)
+        for want in ("18765", "41236", "ufw allow from 192.168.0.0/16", "firewall-cmd"):
+            self.assertIn(want, t)
+        self.assertNotIn("anywhere", t.lower().replace("never from the internet", ""))
+
+    def test_launcher_falls_back_without_a_window(self):
+        from hubuddy_agent import launcher
+        with mock.patch.dict(sys.modules, {"tkinter": None}), mock.patch("hubuddy_agent.__main__.main", return_value=0) as cli:
+            self.assertEqual(launcher.main(["--minimized"]), 0)
+        self.assertIn("--show-invite", cli.call_args[0][0])
+
+
+if __name__ == "__main__":
+    unittest.main()

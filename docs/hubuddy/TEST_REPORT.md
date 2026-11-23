@@ -1,4 +1,4 @@
-# Test report — Hubuddy 3.1.0
+# Test report — Hubuddy 3.2.0
 
 Date: 2026-11-23. Environments: Linux build container (OpenJDK 21, Gradle 8.14, AGP 8.7, Kotlin 2.0, Android SDK Platform 34,
 Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Python 3.12) for the PC program.
@@ -36,6 +36,16 @@ Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Py
 * **Discovery:** only the exact probe is answered, replies are rate limited and carry no secret; the app ignores malformed or
   non-local replies; address changes are followed by host id.
 * **QR:** a real invitation-sized QR is decoded from a synthetic camera frame; blank frames decode to nothing.
+
+## Added in 3.2.0 (Linux)
+
+* **Debian 12 compatibility, verified here with the same versions Debian 12 ships:** Python 3.11 and `cryptography` 38 pass the core, server,
+  remote and Linux suites (this caught and fixed three newer-library calls in the certificate code).
+* **The .deb:** built, inspected, unpacked into a scratch root and run: `hubuddy --selftest` passes 20 of 20; idle it used about 38 MB of memory and about 0.15% of a CPU core
+  (3 threads). CI repeats the install on clean 64-bit and 32-bit Debian 12 containers and runs the agent tests there.
+* **Linux command builders:** every `xdotool`, `systemctl`, `shutdown`, `xclip`, `wl-copy` and `xsel` call is a fixed argument list with no shell (text is data on stdin or after `--`);
+  missing tools are reported as unavailable; a failing command is unavailable, not a crash; the window falls back to the terminal when Tk or a display is missing.
+* **Not verified:** a real Linux desktop (X11/Wayland input, audio, systemd user sessions), real old hardware speed, Android 4.4 (not supported).
 
 ## Added in 3.1.0 (remote control and Wake)
 

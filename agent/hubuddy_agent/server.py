@@ -433,7 +433,7 @@ class AgentServer:
                     raise rc.BadRequest("action must be sleep, restart, shutdown or abort")
                 be.power(action)
                 svc.activity.record("remote_power", phone=name, action=action)
-                return ok(action=action, delaySeconds=15 if action in ("restart", "shutdown") else 0)
+                return ok(action=action, delaySeconds=getattr(be, "power_delay_s", 15) if action in ("restart", "shutdown") else 0)
             if p == "/api/processes":
                 self._method(req, "GET")
                 return Response(200, {"items": be.processes()})

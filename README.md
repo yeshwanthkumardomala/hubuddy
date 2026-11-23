@@ -8,16 +8,17 @@ and files both ways, and let the phone turn into a landscape clock-and-status di
 
 [![Android 5.0+](https://img.shields.io/badge/Android-5.0%2B-3DDC84?logo=android&logoColor=white)](#compatibility)
 [![Windows 10/11](https://img.shields.io/badge/PC-Windows%2010%2F11-0078D4?logo=windows&logoColor=white)](#install-on-the-pc)
+[![Linux](https://img.shields.io/badge/PC-Debian%2012%2B%20%2F%20Linux-A81D33?logo=debian&logoColor=white)](#install-on-linux-debian-12-ubuntu-2204-light-installs-old-pcs)
 [![Kotlin](https://img.shields.io/badge/app-Kotlin-7F52FF?logo=kotlin&logoColor=white)](android/hubuddy)
 [![Python](https://img.shields.io/badge/PC%20program-Python%203.11%2B-3776AB?logo=python&logoColor=white)](agent)
 [![Build](https://github.com/yeshwanthkumardomala/hubuddy/actions/workflows/build.yml/badge.svg?branch=feature%2Fhubuddy-app)](https://github.com/yeshwanthkumardomala/hubuddy/actions/workflows/build.yml)
 
-### Downloads (v3.1.0)
+### Downloads (v3.2.0)
 
-| 📱 Phone app | 💻 PC / laptop program | 💻 PC installer |
-| --- | --- | --- |
-| [**Hubuddy-3.1.0.apk**](releases/Hubuddy-3.1.0.apk) | [**Hubuddy-3.1.0.exe**](releases/Hubuddy-3.1.0.exe) | [**HubuddySetup-3.1.0.exe**](releases/HubuddySetup-3.1.0.exe) |
-| Android 5.0+ · about 170 KB | Windows 10/11 · portable, no install | adds Start menu, firewall rule, autostart option |
+| 📱 Phone app | 💻 Windows program | 💻 Windows installer | 🐧 Debian / Ubuntu / Linux |
+| --- | --- | --- | --- |
+| [**Hubuddy-3.2.0.apk**](releases/Hubuddy-3.2.0.apk) | [**Hubuddy-3.2.0.exe**](releases/Hubuddy-3.2.0.exe) | [**HubuddySetup-3.2.0.exe**](releases/HubuddySetup-3.2.0.exe) | [**hubuddy_3.2.0_all.deb**](releases/hubuddy_3.2.0_all.deb) |
+| Android 5.0+ · about 170 KB | Windows 10/11 · portable, no install | adds Start menu, firewall rule, autostart option | any CPU, no desktop needed · about 100 KB |
 
 <sub>You need the app on the phone and the program on each PC. Checksums, install steps and the
 [Releases page](https://github.com/yeshwanthkumardomala/hubuddy/releases): [all downloads](releases)</sub>
@@ -127,18 +128,32 @@ that PC decides what it means. Details in the [architecture guide](docs/hubuddy/
 
 ## Install on the PC
 
-* **Installer (recommended):** run `HubuddySetup-3.1.0.exe`. It adds a Start menu entry, can allow phones through the
+* **Installer (recommended):** run `HubuddySetup-3.2.0.exe`. It adds a Start menu entry, can allow phones through the
   Windows Firewall for **private** networks only, and can start Hubuddy when you sign in.
-* **Portable:** run `Hubuddy-3.1.0.exe` anywhere. Click *Allow through Windows Firewall* in its window once.
+* **Portable:** run `Hubuddy-3.2.0.exe` anywhere. Click *Allow through Windows Firewall* in its window once.
 * **From source:** Python 3.11+, `pip install -r agent/requirements.txt`, `python -m hubuddy_agent.launcher`.
 
 The programs are not code-signed, so Windows SmartScreen may say "unknown publisher": choose *More info → Run anyway*.
 Verify a download with the `.sha256` files. Optional calendar links, shortcut buttons and Claude Code limits are set up
 in [PC setup and API](docs/hubuddy/API_SETUP.md).
 
+## Install on Linux (Debian 12, Ubuntu 22.04+, light installs, old PCs)
+
+```bash
+sudo apt install ./hubuddy_3.2.0_all.deb       # pulls in python3, psutil and cryptography from your distribution
+hubuddy --show-invite                          # prints a pairing QR code in the terminal (or: hubuddy --pin)
+systemctl --user enable --now hubuddy          # optional: start at login, runs without a window
+hubuddy --firewall-help                        # ufw / firewalld commands for your private network
+```
+
+No desktop is required (a browser on the same PC can open `http://127.0.0.1:8766/` instead of the terminal). It uses about 38 MB
+of memory when idle. On a desktop you can also run `hubuddy-window` (needs `python3-tk`). For the touchpad and keyboard install `xdotool`; for the
+clipboard `xclip` or `wl-clipboard`. Needs Python 3.11 or newer: Debian 12 has it, Debian 11 and Ubuntu 20.04 do not. Other systems: run
+from source with `pip install -r agent/requirements.txt` and `python -m hubuddy_agent`.
+
 ## Install on the phone
 
-Open `Hubuddy-3.1.0.apk` on the phone and allow *install unknown apps*. First login uses the temporary login number and
+Open `Hubuddy-3.2.0.apk` on the phone and allow *install unknown apps*. First login uses the temporary login number and
 PIN of your own build (see [build instructions](docs/hubuddy/BUILD_INSTRUCTIONS.md)); the app makes you choose your own PIN
 straight away.
 
@@ -148,6 +163,7 @@ straight away.
 | --- | --- |
 | Android 5.0 and newer, any brand | Supported. Tested in simulation on Android 5.0, 7.0, 8.0, 9, 11 and 14 |
 | Android 5.0 to 7.0 | Weather and GitHub cards may show "unavailable" on old certificate stores; PC data is unaffected (it uses its own pinned certificate) |
+| Android 4.4 and older | Not supported (no usable TLS 1.2 or safe key storage) |
 | iPhone and other devices | No app |
 
 > **Status:** the automated tests pass (see the [test report](docs/hubuddy/TEST_REPORT.md)) and the Windows program is

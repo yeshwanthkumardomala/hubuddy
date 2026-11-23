@@ -10,6 +10,11 @@ install) from the [Releases page](https://github.com/yeshwanthkumardomala/hubudd
 open it. Windows may show "unknown publisher" because the program is not code-signed: choose *More info → Run anyway*.
 The installer can add a Windows Firewall rule for **private** networks only and start Hubuddy when you sign in.
 
+**Linux (Debian 12+, Ubuntu 22.04+, minimal installs, old PCs):** `sudo apt install ./hubuddy_<version>_all.deb`, then
+`hubuddy --show-invite` (QR in the terminal) or `hubuddy --pin`; `systemctl --user enable --now hubuddy` to start at login;
+`hubuddy --firewall-help` prints the ufw/firewalld commands (private network only). Optional tools the program uses when present:
+`xdotool` (touchpad and keyboard, X11), `xclip` or `wl-clipboard` (clipboard), `python3-tk` (the window). It needs no desktop.
+
 **From source (any OS with Python 3.11+):**
 
 ```powershell

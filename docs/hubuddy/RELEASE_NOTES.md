@@ -1,5 +1,23 @@
 # Release notes
 
+## 3.2.0 — Linux (2026-11-23)
+
+* **Debian package** `hubuddy_3.2.0_all.deb` (about 100 KB): one package for **any CPU** (32-bit and 64-bit x86, ARM, ...) on **Debian 12 and
+  newer** and Ubuntu 22.04+, using the system's own Python 3.11. Works on minimal ("lite") installs: **no desktop needed**. Pair with
+  `hubuddy --show-invite` (QR in the terminal) or `hubuddy --pin`, or open `http://127.0.0.1:8766/` in a browser on that PC.
+  Start at login: `systemctl --user enable --now hubuddy`. Firewall help: `hubuddy --firewall-help` (ufw and firewalld commands for your private network).
+* **Light:** about 38 MB of memory and about 0.15% of one CPU core when idle, 3 threads (measured on a 64-bit machine with Python 3.11).
+* **On Linux the phone can:** read CPU, memory, disk, network, Claude Code and calendar data, send text/links/files both ways, set the PC
+  clipboard (`wl-copy`, `xclip` or `xsel`), and, if you allow it per phone, use the touchpad and keyboard (`xdotool`, X11), volume
+  (via the volume keys), and sleep/restart/shut down (`systemctl`, `shutdown`; a one-minute countdown that Cancel stops). Anything the PC lacks is reported as unavailable.
+* **Compatibility fix:** certificates now work with the older `cryptography` that Debian 12 ships (version 38).
+* The optional Hubuddy window needs `python3-tk` and a desktop; without them the same program runs without a window.
+* **Not available on Linux yet:** now-playing and media buttons, GitHub/Windows-only extras, a Wayland-native input backend (X11 is supported; on Wayland remote input needs XWayland or is reported unavailable),
+  `.rpm`, Flatpak and Snap packages.
+* **Phones:** Android 5.0+ as before. **Android 4.4 and older are not supported** (no usable TLS 1.2 and no safe key storage there); iPhone is not supported.
+* **Not verified:** a real old PC, a real desktop session (X11 or Wayland input, audio, systemd user sessions). CI installs the package on clean
+  64-bit and 32-bit Debian 12 containers, runs the self-test and the tests there; the 32-bit result is in the release's CI run.
+
 ## 3.1.0 — Remote control and Wake (2026-11-23)
 
 * **Remote control from the phone:** a touchpad (drag, tap to click, two fingers to scroll or right-click), a keyboard box with Enter,

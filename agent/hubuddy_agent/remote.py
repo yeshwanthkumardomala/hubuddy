@@ -112,6 +112,7 @@ class Backend:
 
 
 class WindowsBackend(Backend):
+    power_delay_s = 15
     VK = {"enter": 0x0D, "backspace": 0x08, "tab": 0x09, "esc": 0x1B, "space": 0x20, "delete": 0x2E, "up": 0x26, "down": 0x28, "left": 0x25,
           "right": 0x27, "home": 0x24, "end": 0x23, "pageup": 0x21, "pagedown": 0x22, "win": 0x5B, "volup": 0xAF, "voldown": 0xAE,
           "mute": 0xAD, "playpause": 0xB3, "next": 0xB0, "prev": 0xB1, **{f"f{i}": 0x6F + i for i in range(1, 13)}}
@@ -189,7 +190,67 @@ class WindowsBackend(Backend):
             return None
 
 
+class LinuxBackend(Backend):
+    """X11 through `xdotool` (or Wayland through `ydotool`), volume through `pactl` or `amixer`, power through `systemctl`.
+    Every command is a fixed argument list started without a shell; a missing tool is reported as unavailable."""
+    XKEY = {"enter": "Return", "backspace": "BackSpace", "tab": "Tab", "esc": "Escape", "space": "space", "delete": "Delete", "up": "Up",
+            "down": "Down", "left": "Left", "right": "Right", "home": "Home", "end": "End", "pageup": "Prior", "pagedown": "Next",
+            "win": "Super_L", "volup": "XF86AudioRaiseVolume", "voldown": "XF86AudioLowerVolume", "mute": "XF86AudioMute",
+            "playpause": "XF86AudioPlay", "next": "XF86AudioNext", "prev": "XF86AudioPrev", **{f"f{i}": f"F{i}" for i in range(1, 13)}}
+    XMOD = {"ctrl": "ctrl", "shift": "shift", "alt": "alt", "win": "super"}
+    power_delay_s = 60  # `shutdown` counts in whole minutes
+    XBTN = {"left": "1", "middle": "2", "right": "3"}
+
+    def __init__(self, which=None, run=None):
+        import shutil
+        self.which = which or shutil.which
+        self.run_cmd = run or (lambda argv: subprocess.run(argv, shell=False, timeout=5, capture_output=True))
+
+    def _tool(self, *names):
+        for n in names:
+            if self.which(n):
+                return n
+        raise Unavailable(f"install {' or '.join(names)} on this PC to enable this")
+
+    def _run(self, argv):
+        r = self.run_cmd(argv)
+        if getattr(r, "returncode", 0) != 0:
+            raise Unavailable("the PC could not do that (is a desktop session running?)")
+
+    def move(self, dx, dy): self._run([self._tool("xdotool"), "mousemove_relative", "--", str(dx), str(dy)])
+
+    def click(self, button, double):
+        self._run([self._tool("xdotool"), "click", *(["--repeat", "2", "--delay", "60"] if double else []), self.XBTN[button]])
+
+    def scroll(self, dy):
+        n = max(1, min(abs(dy) // 8 + 1, 20))
+        self._run([self._tool("xdotool"), "click", "--repeat", str(n), "5" if dy > 0 else "4"])
+
+    def key(self, key, mods):
+        combo = "+".join([self.XMOD[m] for m in mods] + [self.XKEY[key]])
+        self._run([self._tool("xdotool"), "key", "--", combo])
+
+    def text(self, text): self._run([self._tool("xdotool"), "type", "--delay", "8", "--", text])
+
+    def power(self, action):
+        if action == "abort":
+            return self._run([self._tool("shutdown"), "-c"])
+        argv = {"sleep": [self._tool("systemctl"), "suspend"], "restart": [self._tool("shutdown"), "-r", "+1"],
+                "shutdown": [self._tool("shutdown"), "-h", "+1"]}[action]
+        self._run(argv)
+
+    def battery(self):
+        try:
+            import psutil
+            b = psutil.sensors_battery()
+            return None if b is None else {"percent": round(b.percent), "charging": bool(b.power_plugged)}
+        except Exception:
+            return None
+
+
 def default_backend() -> Backend:
+    if sys.platform.startswith("linux"):
+        return LinuxBackend()
     if sys.platform == "win32":
         try:
             return WindowsBackend()
