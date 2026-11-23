@@ -12,7 +12,7 @@ Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Py
 
 | Suite | Result |
 | --- | --- |
-| PC program tests (Python) | ✅ **112 pass** on Linux (the 3.0.0 set of 101 also passed on **real Windows** in CI; 3.1.0's CI run follows the release) |
+| PC program tests (Python) | ✅ **111 pass** on Linux (the 3.0.0 set of 101 also passed on **real Windows** in CI; 3.1.0's CI run follows the release) |
 | `Hubuddy.exe --selftest` (20 checks: QR + PIN pairing, API, messages, files, discovery, forget) | ✅ passes as a Linux binary here, and as the **portable and the installed Windows program** in CI |
 | Windows installer | ✅ built, **installed silently, self-tested, uninstalled cleanly** on a Windows runner |
 | Android unit + Robolectric UI tests | ✅ **213 run, 0 failed** (13 skipped: 12 screenshot renders and the interop test unless a PC program runs) |
