@@ -28,7 +28,8 @@ class ControlsScreen(host: MainActivity) : Screen(host) {
             }
             val enabled = s.online && m.optBoolean("active")
             addView(ui.hbox {
-                listOf("⏮" to "prev", if (m.optBoolean("playing")) "⏸" to "toggle" else "▶" to "toggle", "⏭" to "next").forEach { (label, cmd) ->
+                // Plain words: media symbols (⏮ ⏸ ⏭) render as emoji or empty boxes on some phones.
+                listOf("Prev" to "prev", (if (m.optBoolean("playing")) "Pause" else "Play") to "toggle", "Next" to "next").forEach { (label, cmd) ->
                     addView(ui.button(label, primary = cmd == "toggle", tag = "media_$cmd") { media(cmd) }.apply {
                         isEnabled = enabled; alpha = if (enabled) 1f else 0.4f
                     }, ui.lp(0, -2, 1f).apply { leftMargin = ui.dp(3); rightMargin = ui.dp(3) })

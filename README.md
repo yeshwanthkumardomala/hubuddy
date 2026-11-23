@@ -26,4 +26,5 @@ Documentation: [Architecture](docs/deskhub/ARCHITECTURE.md) ·
 [Companion & API setup](docs/deskhub/API_SETUP.md) ·
 [Test report](docs/deskhub/TEST_REPORT.md) ·
 [Release notes](docs/deskhub/RELEASE_NOTES.md) ·
+[Screenshots](docs/deskhub/SCREENSHOTS.md) ·
 [Third-party notices](docs/deskhub/THIRD_PARTY_NOTICES.md)

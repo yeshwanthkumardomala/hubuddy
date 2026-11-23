@@ -61,6 +61,10 @@ android {
                 // Robolectric's sandbox needs some headroom.
                 maxHeapSize = '1g'
                 // Optional: where Robolectric downloads its Android runtime jars (default Maven Central).
+                // Screenshot generator (skipped otherwise): gradlew testDebugUnitTest -Pscreenshots=<dir> --tests '*Screenshots*'
+                if (project.hasProperty('screenshots')) {
+                    systemProperty 'deskhub.screenshots', project.property('screenshots')
+                }
                 if (project.hasProperty('robolectricRepoUrl')) {
                     systemProperty 'robolectric.dependency.repo.url', project.property('robolectricRepoUrl')
                 }

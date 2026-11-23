@@ -38,6 +38,7 @@ const KEY = "deskhub.token";
 let token = localStorage.getItem(KEY);
 const $ = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstChild; };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const fmtTok = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
 const pct = (v) => typeof v === "number" ? v : null;
 const meter = (label, v, extra="") => v == null
   ? `<div class="row"><span>${label}</span><span class="muted">unavailable</span></div>`
@@ -78,9 +79,9 @@ function render(s) {
     `<div class="card"><h2>CLAUDE CODE</h2>${!cl && !al ? `<p class="muted">Claude Code companion not connected.</p>` :
        (al ? `<p style="color:var(--warn)">${al.kind === "permission" ? "Waiting for permission" : "Waiting for input"}: ${esc(al.title)}</p>` : "") +
        (five ? meter("5-hour limit", pct(five.pct)) : "") +
-       (cl && cl.today ? `<div class="row"><span>Tokens today</span><span>${cl.today.tokens}</span></div>` : "")}</div>`,
+       (cl && cl.today ? `<div class="row"><span>Tokens today</span><span>${fmtTok(cl.today.tokens)}</span></div>` : "")}</div>`,
     `<div class="card"><h2>NOW PLAYING</h2>${md && md.active ? `<b>${esc(md.title)}</b><div class="muted">${esc(md.artist)}</div>
-       <div class="btns" style="margin-top:8px"><button class="alt" data-m="prev">⏮</button><button data-m="toggle">${md.playing ? "⏸" : "▶"}</button><button class="alt" data-m="next">⏭</button></div>`
+       <div class="btns" style="margin-top:8px"><button class="alt" data-m="prev">Prev</button><button data-m="toggle">${md.playing ? "Pause" : "Play"}</button><button class="alt" data-m="next">Next</button></div>`
        : `<p class="muted">Nothing playing.</p>`}</div>`,
     `<div class="card"><h2>NEXT EVENT</h2>${ev ? `<b>${esc(ev.title)}</b><div class="muted">${new Date(ev.start * 1000).toLocaleString()}</div>` : `<p class="muted">No upcoming events.</p>`}</div>`,
     `<div class="card"><h2>INTERNET</h2>${net ? `<div class="row"><span>Status</span><span>${net.online ? "online" : "offline"}</span></div>
