@@ -1,5 +1,20 @@
 # Release notes
 
+## 3.4.0 — Logo, a window that never freezes, chord keyboard (2026-11-23)
+
+* **Logo:** a new Hubuddy logo (an H whose crossbar is a signal pulse) on the phone app icon and header, the Windows program and installer icon, the
+  Windows window, the Linux desktop entry, the PC's web page and the README.
+* **The Windows window no longer freezes on opening.** A recording showed the old window going washed-out ("Not Responding") right after it opened,
+  because it waited for the PC side to start without redrawing. Now the window opens at once with the logo and "Starting…", the PC side starts on its
+  own thread, and the main window replaces the splash when ready. The window is built off-screen and shown once, the phone list is redrawn only when something
+  changed, and a start-up error is explained in a message instead of a hang.
+* **New-generation window:** dark or light following Windows, cards, a status pill, one row per phone with its own *Remote control* switch and Forget button,
+  the QR code and PIN inside the window, sharp text on high-resolution screens, sensible size and position.
+* **Keyboard chords on the phone:** hold Ctrl, Shift, Alt or Win with one finger and tap another key with a second finger (for example Ctrl + Shift + T, or Ctrl + Shift + F5);
+  a quick tap on a modifier keeps it for exactly the next key. New F1 to F12 row and a full A to Z and 0 to 9 key set. A line shows the chord being held.
+* **Not verified:** how the window looks on your screen is checked by a smoke test on a real Windows desktop in CI (it draws and saves a picture), but I have not been able to look at your screen; chords are tested
+  with simulated touches, not a real two-finger press.
+
 ## 3.3.0 — Proper trackpad, no sign-in (2026-11-23)
 
 * **No sign-in.** The app opens straight to the dashboard: no login number, no first-login PIN. An optional PIN lock (your own PIN) can be

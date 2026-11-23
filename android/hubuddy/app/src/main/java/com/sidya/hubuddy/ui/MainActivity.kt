@@ -124,9 +124,18 @@ class MainActivity : Activity() {
         rebuildNavItems()
     }
 
+    /** The Hubuddy logo at [sizeDp]. */
+    private fun logoView(sizeDp: Int): View = android.widget.ImageView(this).apply {
+        setImageResource(R.drawable.ic_logo); tag = "logo"
+        contentDescription = "Hubuddy"
+        layoutParams = LinearLayout.LayoutParams(ui.dp(sizeDp), ui.dp(sizeDp))
+    }
+
     private fun portraitFrame(): View = ui.vbox {
         addView(ui.hbox {
             setPadding(ui.dp(16), ui.dp(10), ui.dp(12), ui.dp(8))
+            gravity = Gravity.CENTER_VERTICAL
+            addView(logoView(36), ui.lp(-2, -2).apply { rightMargin = ui.dp(10) })
             addView(ui.vbox {
                 addView(ui.text("Hubuddy", 16f, Pal.text, bold = true))
                 addView(ui.text("SIDYA EDITION", 9f, Pal.walnut, bold = true).apply { letterSpacing = 0.2f })
@@ -151,6 +160,7 @@ class MainActivity : Activity() {
             setBackgroundColor(Pal.surface)
             gravity = Gravity.CENTER_HORIZONTAL
             setPadding(0, ui.dp(10), 0, ui.dp(8))
+            addView(logoView(34), ui.lp(-2, -2).apply { bottomMargin = ui.dp(4) })
             addView(ui.text("Hubuddy", 12f, Pal.text, bold = true).apply { gravity = Gravity.CENTER })
             addView(ui.text("SIDYA", 8f, Pal.walnut, bold = true).apply { gravity = Gravity.CENTER; letterSpacing = 0.2f }, ui.lp(bottom = 8))
             addView(navBar, ui.lp(-1, 0, 1f))

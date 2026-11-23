@@ -41,7 +41,8 @@ SECTIONS = {
 }
 MEDIA_CMDS = {"toggle", "next", "prev"}
 ALERT_ACTIONS = {"dismiss"}
-WEB_FILES = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8", "style.css": "text/css; charset=utf-8"}
+WEB_FILES = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8", "style.css": "text/css; charset=utf-8",
+             "logo.png": "image/png", "favicon.png": "image/png"}
 
 REASONS = {200: "OK", 204: "No Content", 400: "Bad Request", 401: "Unauthorized", 403: "Forbidden", 404: "Not Found",
            405: "Method Not Allowed", 408: "Request Timeout", 409: "Conflict", 413: "Payload Too Large", 429: "Too Many Requests",

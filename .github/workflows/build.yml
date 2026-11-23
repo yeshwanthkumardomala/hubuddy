@@ -12,8 +12,8 @@ on:
         type: boolean
         default: false
       version:
-        description: Version for the release, e.g. 3.3.0
-        default: "3.3.0"
+        description: Version for the release, e.g. 3.4.0
+        default: "3.4.0"
 
 permissions:
   contents: read
@@ -38,6 +38,15 @@ jobs:
         run: |
           $env:PYTHONPATH = "tests;."
           python -m unittest discover -s tests -v
+      - name: Window smoke test (real Windows desktop; saves a picture of the window)
+        run: |
+          pip install pillow
+          python -m hubuddy_agent.launcher --smoke "$PWD\window.png"
+          if ($LASTEXITCODE -ne 0) { throw "the Hubuddy window failed to start" }
+          if (-not (Test-Path window.png)) { Write-Warning "window drew, but no picture could be taken" }
+        working-directory: agent
+        env:
+          PYTHONPATH: .
       - name: Build Hubuddy.exe
         run: pyinstaller --noconfirm --distpath dist --workpath build/pyi agent/hubuddy.spec
       - name: Self-test the portable program
@@ -48,7 +57,7 @@ jobs:
       - name: Build the installer
         run: |
           choco install innosetup -y --no-progress
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\Hubuddy.iss "/DAppVersion=3.3.0" "/DSourceExe=$PWD\dist\Hubuddy.exe"
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\Hubuddy.iss "/DAppVersion=3.4.0" "/DSourceExe=$PWD\dist\Hubuddy.exe"
       - name: Install silently, self-test the installed program, uninstall
         run: |
           $dir = "$env:RUNNER_TEMP\HubuddyInstalled"
@@ -73,6 +82,7 @@ jobs:
             dist/HubuddySetup.exe
             dist/*.sha256
             selftest-*.json
+            agent/window.png
 
   linux:
     name: Linux package (Debian 12)

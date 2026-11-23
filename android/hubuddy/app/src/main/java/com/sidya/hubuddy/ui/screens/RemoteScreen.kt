@@ -26,7 +26,9 @@ class RemoteScreen(host: MainActivity) : Screen(host) {
     private var allowed: Boolean? = null
     private var note: String? = null
     private var dragging = false
-    private val mods = linkedSetOf<String>()   // sticky Ctrl/Shift/Alt/Win for the next key
+    private val mods = linkedSetOf<String>()   // sticky: tap a modifier to keep it for the next key
+    private val held = linkedSetOf<String>()   // chord: modifiers held down by a finger right now
+    private var chordLabel: TextView? = null
     private var sender: InputSender? = null
     private var pad: TouchpadView? = null
     private var speedLabel: TextView? = null
@@ -56,6 +58,7 @@ class RemoteScreen(host: MainActivity) : Screen(host) {
     }
 
     override fun onLeave() {
+        held.clear(); mods.clear()
         pad?.cancelTouches()
         sender?.close(); sender = null     // releases any held mouse button first
         dragging = false
@@ -73,7 +76,45 @@ class RemoteScreen(host: MainActivity) : Screen(host) {
         )
     }
 
-    private fun key(k: String) { sender().key(k, mods.toList()); mods.clear(); host.rerender() }
+    /** Modifiers that apply to the next key: the ones tapped on plus the ones a finger is holding (a chord). */
+    private fun effectiveMods(): List<String> = ORDER.filter { it in mods || it in held }
+
+    private fun key(k: String) {
+        sender().key(k, effectiveMods())
+        if (mods.isNotEmpty()) { mods.clear(); host.rerender() } else updateChord()
+    }
+
+    private fun updateChord() {
+        val m = effectiveMods()
+        chordLabel?.text = if (m.isEmpty()) "Hold Ctrl, Shift, Alt or Win with one finger and tap a key with another. A quick tap keeps the modifier for the next key."
+        else "Chord: " + m.joinToString(" + ") { it.replaceFirstChar { c -> c.uppercase() } } + " + …"
+    }
+
+    /** A modifier button that works both ways: hold it while pressing another key (a chord), or tap it to keep it for the next key. */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun modifierChip(label: String, m: String): View {
+        val chip = ui.chip(label, m in mods, "mod_$m") { }
+        var downAt = 0L
+        fun paint() {
+            val on = m in mods || m in held
+            chip.setTextColor(if (on) Pal.onAccent else Pal.text)
+            chip.background = ui.rounded(if (on) Pal.accent else Pal.surface2, 16)
+        }
+        chip.setOnClickListener(null)
+        chip.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> { downAt = System.currentTimeMillis(); held.add(m); paint(); updateChord() }
+                android.view.MotionEvent.ACTION_UP -> {
+                    held.remove(m)
+                    if (System.currentTimeMillis() - downAt < TAP_MS) { if (!mods.add(m)) mods.remove(m) }
+                    paint(); updateChord(); v.performClick()
+                }
+                android.view.MotionEvent.ACTION_CANCEL -> { held.remove(m); paint(); updateChord() }
+            }
+            true
+        }
+        return chip
+    }
 
     private fun post(path: String, body: JSONObject, ok: String? = null) {
         app.repo.background({ app.agent.post(path, body, pc()) }) { r ->
@@ -132,15 +173,22 @@ class RemoteScreen(host: MainActivity) : Screen(host) {
                 val t = box.text.toString()
                 if (t.isNotEmpty()) { sender().text(t); box.setText("") }
             }, ui.lp(bottom = 8))
-            addView(ui.text("Modifiers for the next key:", 11f, Pal.dim))
             addView(ui.hbox {
                 listOf("Ctrl" to "ctrl", "Shift" to "shift", "Alt" to "alt", "Win" to "win").forEach { (label, m) ->
-                    addView(ui.chip(label, m in mods, "mod_$m") { if (!mods.add(m)) mods.remove(m); host.rerender() }, ui.lp(-2, -2).apply { rightMargin = ui.dp(6) })
+                    addView(modifierChip(label, m), ui.lp(-2, -2).apply { rightMargin = ui.dp(6) })
                 }
-            }, ui.lp(top = 4, bottom = 8))
+            }, ui.lp(top = 2, bottom = 4))
+            addView(ui.text("", 11f, Pal.dim, tag = "chordLabel").also { chordLabel = it }, ui.lp(bottom = 8))
+            updateChord()
             keyRow("Enter" to "enter", "⌫" to "backspace", "Del" to "delete", "Esc" to "esc", "Tab" to "tab")
             keyRow("◀" to "left", "▲" to "up", "▼" to "down", "▶" to "right")
             keyRow("Home" to "home", "End" to "end", "PgUp" to "pageup", "PgDn" to "pagedown")
+            addView(ui.text("Function keys", 11f, Pal.dim), ui.lp(top = 8, bottom = 2))
+            keyRow("F1" to "f1", "F2" to "f2", "F3" to "f3", "F4" to "f4", "F5" to "f5", "F6" to "f6")
+            keyRow("F7" to "f7", "F8" to "f8", "F9" to "f9", "F10" to "f10", "F11" to "f11", "F12" to "f12")
+            addView(ui.text("Letters and numbers for chords (for example Ctrl + Shift + T):", 11f, Pal.dim), ui.lp(top = 8, bottom = 2))
+            "abcdefghijklmnopqrstuvwxyz".chunked(9).forEach { chunk -> keyRow(*chunk.map { it.uppercase() to it.toString() }.toTypedArray()) }
+            keyRow(*"1234567890".map { it.toString() to it.toString() }.toTypedArray())
         })
         cards.add(ui.card("Shortcuts", tag = "shortcutCard") {
             fun combo(label: String, k: String, vararg m: String) = ui.button(label, primary = false, tag = "sc_$label") { sender().key(k, m.toList()) }
@@ -175,5 +223,5 @@ class RemoteScreen(host: MainActivity) : Screen(host) {
 
     private fun release() { dragging = false; sender().button("left", false); host.rerender() }
 
-    companion object { const val SCROLL_GAIN = 4f }
+    companion object { const val SCROLL_GAIN = 4f; const val TAP_MS = 350L; val ORDER = listOf("ctrl", "shift", "alt", "win") }
 }

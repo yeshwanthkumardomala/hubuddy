@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A small dock display: walnut stand, teal screen. -->
+<!-- The Hubuddy logo: an H whose crossbar is a signal pulse, with a small signal dot. Same drawing as tools/make_logo.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#8A5A3B" android:pathData="M36,74h36v6h-36z" />
-    <path android:fillColor="#8A5A3B" android:pathData="M50,66h8v8h-8z" />
-    <path android:fillColor="#24272B" android:pathData="M30,34h48a4,4 0,0 1,4 4v24a4,4 0,0 1,-4 4h-48a4,4 0,0 1,-4 -4v-24a4,4 0,0 1,4 -4z" />
-    <path android:fillColor="#2EC4B6" android:pathData="M34,40h18v6h-18z" />
-    <path android:fillColor="#2EC4B6" android:pathData="M34,50h30v3h-30z" />
-    <path android:fillColor="#9AA0A6" android:pathData="M34,56h22v3h-22z" />
+    <path android:fillColor="#ECF3FA" android:pathData="M35.2,28h3.6a4.2,4.2 0,0 1,4.2 4.2v43.6a4.2,4.2 0,0 1,-4.2 4.2h-3.6a4.2,4.2 0,0 1,-4.2 -4.2v-43.6a4.2,4.2 0,0 1,4.2 -4.2z" />
+    <path android:fillColor="#ECF3FA" android:pathData="M69.2,28h3.6a4.2,4.2 0,0 1,4.2 4.2v43.6a4.2,4.2 0,0 1,-4.2 4.2h-3.6a4.2,4.2 0,0 1,-4.2 -4.2v-43.6a4.2,4.2 0,0 1,4.2 -4.2z" />
+    <path android:fillColor="#2EC4B6" android:pathData="M44.2,48h19.6a4.2,4.2 0,0 1,4.2 4.2v3.6a4.2,4.2 0,0 1,-4.2 4.2h-19.6a4.2,4.2 0,0 1,-4.2 -4.2v-3.6a4.2,4.2 0,0 1,4.2 -4.2z" />
+    <path android:fillColor="#2EC4B6" android:pathData="M88,19.5a4.5,4.5 0,1 0,0.001 0z" />
+    <path android:strokeColor="#2EC4B6" android:strokeWidth="2.4" android:strokeLineCap="round" android:pathData="M77,24a11,11 0,0 1,11 -11" />
 </vector>

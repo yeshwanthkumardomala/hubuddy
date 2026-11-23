@@ -11,7 +11,7 @@ a = Analysis(
     [f"{agent}/hubuddy_launcher.py"],
     pathex=[agent],
     binaries=[],
-    datas=[(f"{agent}/web", "web"), (f"{agent}/config.example.toml", ".")],
+    datas=[(f"{agent}/web", "web"), (f"{agent}/config.example.toml", "."), (f"{agent}/hubuddy.ico", ".")],
     hiddenimports=hidden,
     excludes=["pytest", "unittest.mock"],
     cipher=block_cipher,
@@ -22,5 +22,5 @@ exe = EXE(
     name="Hubuddy",
     console=False,   # a window, not a console; --selftest writes its result to a file
     upx=False,
-    icon=None,
+    icon=f"{agent}/hubuddy.ico",
 )

@@ -242,6 +242,23 @@ class UiFlowTest {
             waitFor(5000) { inputs.any { it.contains("hello") } }
             m.byTag<View>("key_enter")!!.performClick()
             waitFor(5000) { inputs.any { it.contains("enter") } }
+            // a chord: hold Ctrl and Shift with fingers, tap F5 with another
+            val t1 = android.os.SystemClock.uptimeMillis()
+            m.byTag<View>("mod_ctrl")!!.dispatchTouchEvent(android.view.MotionEvent.obtain(t1, t1, android.view.MotionEvent.ACTION_DOWN, 5f, 5f, 0))
+            m.byTag<View>("mod_shift")!!.dispatchTouchEvent(android.view.MotionEvent.obtain(t1, t1, android.view.MotionEvent.ACTION_DOWN, 5f, 5f, 0))
+            assertTrue(allText(m.window.decorView).contains("Chord: Ctrl + Shift"))
+            m.byTag<View>("key_f5")!!.performClick()
+            waitFor(5000) { inputs.any { it.contains("f5") && it.contains("ctrl") && it.contains("shift") } }
+            m.byTag<View>("mod_ctrl")!!.dispatchTouchEvent(android.view.MotionEvent.obtain(t1, t1 + 900, android.view.MotionEvent.ACTION_UP, 5f, 5f, 0))
+            m.byTag<View>("mod_shift")!!.dispatchTouchEvent(android.view.MotionEvent.obtain(t1, t1 + 900, android.view.MotionEvent.ACTION_UP, 5f, 5f, 0))
+            // a quick tap keeps the modifier for exactly the next key
+            val t2 = android.os.SystemClock.uptimeMillis()
+            m.byTag<View>("mod_alt")!!.dispatchTouchEvent(android.view.MotionEvent.obtain(t2, t2, android.view.MotionEvent.ACTION_DOWN, 5f, 5f, 0))
+            m.byTag<View>("mod_alt")!!.dispatchTouchEvent(android.view.MotionEvent.obtain(t2, t2 + 80, android.view.MotionEvent.ACTION_UP, 5f, 5f, 0))
+            m.byTag<View>("key_tab")!!.performClick()
+            waitFor(5000) { inputs.any { it.contains("tab") && it.contains("alt") } }
+            m.byTag<View>("key_esc")!!.performClick()
+            waitFor(5000) { inputs.any { it.contains("esc") && !it.contains("alt") } }
             assertTrue(inputs.all { it.contains("events") })
         } finally { server.stop() }
     }

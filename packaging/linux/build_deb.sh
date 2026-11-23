@@ -8,7 +8,7 @@ stage="$(mktemp -d)"
 trap 'rm -rf "$stage"' EXIT
 lib="$stage/usr/lib/hubuddy"
 mkdir -p "$lib" "$stage/usr/bin" "$stage/usr/lib/systemd/user" "$stage/usr/share/applications" "$stage/etc/ufw/applications.d" \
-         "$stage/usr/share/doc/hubuddy" "$stage/DEBIAN"
+         "$stage/usr/share/doc/hubuddy" "$stage/usr/share/icons/hicolor/256x256/apps" "$stage/DEBIAN"
 
 cp -r "$root/agent/hubuddy_agent" "$root/agent/web" "$lib/"
 cp "$root/agent/config.example.toml" "$lib/"
@@ -55,6 +55,7 @@ Type=Application
 Name=Hubuddy
 Comment=Pair phones with this PC
 Exec=hubuddy-window
+Icon=hubuddy
 Terminal=false
 Categories=Utility;Network;
 DESK
@@ -66,6 +67,7 @@ description=Lets phones on your network find and talk to this PC
 ports=8765/tcp|41236/udp
 UFW
 
+cp "$root/agent/web/logo.png" "$stage/usr/share/icons/hicolor/256x256/apps/hubuddy.png"
 cp "$root/NOTICE" "$stage/usr/share/doc/hubuddy/copyright"
 cat > "$stage/DEBIAN/control" <<CTL
 Package: hubuddy
