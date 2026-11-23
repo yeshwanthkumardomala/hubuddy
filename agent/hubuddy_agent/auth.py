@@ -1,108 +1,76 @@
-"""Device pairing and bearer-token authentication for the agent.
+"""Request authorization helpers (ported in spirit from a design with the same threat model).
 
-* A 6-digit pairing code is printed on the PC console. It is single-use, expires,
-  and is invalidated after a few wrong guesses.
-* A successful pairing returns a random 256-bit device token. Only its SHA-256 is
-  stored on disk, so the devices file is useless to someone who copies it.
+* The Host header must be a name we recognise (or an IP literal). A web page whose domain resolves to this PC
+  (DNS rebinding) sends its own domain as Host and is refused.
+* Loopback is trusted only for the local pages, and only when the Host header is a loopback name too.
 """
-import hashlib
-import hmac
-import json
-import os
-import pathlib
-import secrets
-import threading
-import time
+import ipaddress
+import re
+import socket
 
-DEFAULT_STORE = pathlib.Path.home() / ".hubuddy" / "agent_devices.json"
-CODE_ATTEMPTS = 5
+from .netinfo import is_loopback
+
+HOST_HEADER = re.compile(r"^(?:\[[0-9a-f:.]+\]|[a-z0-9._-]+)(?::\d{1,5})?$", re.I)
+LOCAL_ACTION_HEADER = "x-hubuddy-local"
 
 
-def _sha(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+def host_name(header) -> str:
+    """The name part of a Host header, without port or IPv6 brackets; "" when it does not parse."""
+    if not isinstance(header, str) or not HOST_HEADER.match(header):
+        return ""
+    h = header.lower()
+    if h.startswith("["):
+        return h[1:h.index("]")]
+    return h.rsplit(":", 1)[0].rstrip(".") if re.search(r":\d{1,5}$", h) else h.rstrip(".")
 
 
-class DeviceAuth:
-    def __init__(self, path: pathlib.Path = DEFAULT_STORE, clock=time.time):
-        self.path = pathlib.Path(path)
-        self.clock = clock
-        self._lock = threading.Lock()
-        self._code: str | None = None
-        self._code_expires = 0.0
-        self._code_attempts = 0
-        self.devices: list[dict] = self._load()
+def is_loopback_host(header) -> bool:
+    n = host_name(header)
+    return n == "localhost" or is_loopback(n)
 
-    # ---- storage ---------------------------------------------------------
-    def _load(self) -> list[dict]:
-        try:
-            data = json.loads(self.path.read_text(encoding="utf-8"))
-            return [d for d in data.get("devices", []) if isinstance(d, dict) and "token_sha256" in d]
-        except (OSError, ValueError):
-            return []
 
-    def _save(self):
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"devices": self.devices}, indent=2), encoding="utf-8")
-        try:
-            os.chmod(tmp, 0o600)
-        except OSError:
-            pass
-        os.replace(tmp, self.path)
+def _is_ip(name: str) -> bool:
+    try:
+        ipaddress.ip_address(name)
+        return True
+    except ValueError:
+        return False
 
-    # ---- pairing -----------------------------------------------------------
-    def new_code(self, minutes: float = 10) -> str:
-        with self._lock:
-            self._code = f"{secrets.randbelow(1_000_000):06d}"
-            self._code_expires = self.clock() + minutes * 60
-            self._code_attempts = 0
-            return self._code
 
-    @property
-    def pairing_open(self) -> bool:
-        return self._code is not None and self.clock() < self._code_expires
+def make_host_check(machine: str | None = None, extra: list[str] | None = None, tls_name: str = ""):
+    names = {"localhost"}
+    base = host_name((machine or socket.gethostname() or "").strip())
+    if base:
+        names |= {base, f"{base}.local"}
+    if tls_name:
+        names.add(tls_name.lower())
+    for item in extra or []:
+        n = host_name(item.strip())
+        if n:
+            names.add(n)
 
-    def pair(self, code: str, device: str) -> str | None:
-        """Exchange a valid code for a new device token (None if refused)."""
-        with self._lock:
-            if self._code is None or self.clock() >= self._code_expires:
-                self._code = None
-                return None
-            self._code_attempts += 1
-            ok = hmac.compare_digest(str(code).encode(), self._code.encode())
-            if not ok:
-                if self._code_attempts >= CODE_ATTEMPTS:
-                    self._code = None  # too many guesses: the PC must issue a new code
-                return None
-            self._code = None  # single use
-            token = secrets.token_urlsafe(32)
-            name = "".join(ch for ch in str(device)[:40] if ch.isprintable()) or "device"
-            self.devices.append({"id": secrets.token_hex(4), "name": name, "token_sha256": _sha(token),
-                                 "created": int(self.clock()), "last_seen": 0})
-            self._save()
-            return token
+    def allowed(header) -> bool:
+        n = host_name(header)
+        return bool(n) and (_is_ip(n) or n in names)
+    return allowed
 
-    # ---- verification ------------------------------------------------------
-    def check(self, token: str | None) -> dict | None:
-        if not token:
-            return None
-        digest = _sha(token)
-        found = None
-        for d in self.devices:
-            if hmac.compare_digest(d["token_sha256"], digest):
-                found = d
-        if found is not None:
-            now = int(self.clock())
-            if now - int(found.get("last_seen", 0)) > 300:
-                found["last_seen"] = now
-                try:
-                    self._save()
-                except OSError:
-                    pass
-        return found
 
-    def revoke(self, device_id: str) -> int:
-        before = len(self.devices)
-        self.devices = [] if device_id == "all" else [d for d in self.devices if d["id"] != device_id]
-        self._save()
-        return before - len(self.devices)
+def local_request_ok(headers: dict, remote: str, port: int | None = None, mutating: bool = False) -> bool:
+    """A request to the local (loopback-only) pages: loopback peer, loopback Host, same-origin or no Origin."""
+    if not is_loopback(remote) or not is_loopback_host(headers.get("host")):
+        return False
+    origin = headers.get("origin")
+    if origin:
+        m = re.match(r"^http://([^/]+)$", origin)
+        if not m or not is_loopback_host(m.group(1)):
+            return False
+    if headers.get("sec-fetch-site") not in (None, "same-origin", "none"):
+        return False
+    if mutating and headers.get(LOCAL_ACTION_HEADER) != "1":
+        return False
+    return True
+
+
+def bearer(headers: dict) -> str | None:
+    value = headers.get("authorization", "")
+    return value[7:].strip() if value[:7].lower() == "bearer " else None

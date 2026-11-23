@@ -1,9 +1,9 @@
-"""Run the Hubuddy agent on a PC:
+"""Run the Hubuddy agent on a PC or laptop:
 
-    python -m hubuddy_agent                  # USB mode: 127.0.0.1:8765 (use `adb reverse`)
-    python -m hubuddy_agent --lan            # also reachable on the local network (private clients only)
-    python -m hubuddy_agent --pair           # print a new pairing code
-    python -m hubuddy_agent --list-devices   # or: --revoke <id|all>
+    python -m hubuddy_agent                    # start; open http://127.0.0.1:8766/ on this PC to pair a phone
+    python -m hubuddy_agent --show-invite      # also print the pairing invitation (QR) in this window
+    python -m hubuddy_agent --pin              # also print a PIN to pair without a camera
+    python -m hubuddy_agent --list-phones      # or: --forget <id|all>
 """
 import argparse
 import asyncio
@@ -11,69 +11,96 @@ import logging
 import pathlib
 import sys
 
-from . import VERSION
-from .auth import DEFAULT_STORE, DeviceAuth
-from .config import find_config, load
+from . import VERSION, discovery, ports, services
+from .config import HOME_DIR, find_config, load
 from .server import AgentServer
 
-WEB_DIR = pathlib.Path(__file__).resolve().parent.parent / "web"
+DEFAULT_LOCAL_PORT = 8766
 
 
-async def amain(args, auth: DeviceAuth, cfg: dict):
+def web_dir() -> pathlib.Path:
+    base = pathlib.Path(getattr(sys, "_MEIPASS", pathlib.Path(__file__).resolve().parent.parent))
+    return base / "web"
+
+
+def print_invite(server: AgentServer, svc) -> None:
+    import segno
+    issued = svc.pairing.invites.issue(server.invite_details())
+    print("\nScan this with Hubuddy on the phone (Settings > PCs and laptops > Scan QR), within 2 minutes:\n")
+    segno.make(issued["invitation"], error="m").terminal(compact=True, border=2)
+    print("\nNo camera? Paste this invitation into the app instead:\n" + issued["invitation"] + "\n")
+
+
+async def amain(args, svc, cfg: dict):
     from .source import Agent
 
-    agent = Agent(cfg)
-    host = "0.0.0.0" if args.lan else args.host
-    server = AgentServer(agent, auth, host=host, port=args.port, web_dir=None if args.no_web else WEB_DIR)
+    agent = Agent(cfg, home=svc.home)
+    port = ports.choose(svc.home, args.port, args.host)
+    server = AgentServer(agent, svc, lan_host=args.host, port=port, local_port=args.local_port, web_dir=web_dir())
     await server.start()
-    print(f"Hubuddy agent {VERSION} listening on {host}:{server.port}")
-    if host in ("127.0.0.1", "localhost"):
-        print(f"USB mode: connect the phone and run   adb reverse tcp:{server.port} tcp:{server.port}")
-    else:
-        print("Wi-Fi mode: only private-network clients are accepted. Traffic is NOT encrypted; use a network you trust.")
-    if args.pair or not auth.devices:
-        print(f"\n  Pairing code: {auth.new_code(args.pair_minutes)}   (valid {args.pair_minutes:g} min, single use)\n")
-    else:
-        print(f"{len(auth.devices)} paired device(s). Start with --pair to pair another.")
+    if not args.no_discovery:
+        svc.discovery_transport = await discovery.start(server.info)
+    print(f"Hubuddy agent {VERSION} on {svc.name}")
+    print(f"  Phones connect to  https://<this PC>:{server.port}  (found automatically on the same network)")
+    print(f"  Pair a phone at    http://127.0.0.1:{server.local_port}/   (open this on this PC)")
+    if not svc.discovery_on():
+        print("  Note: automatic discovery is off; type this PC's address on the phone.")
+    if args.show_invite:
+        print_invite(server, svc)
+    if args.pin:
+        started = svc.pairing.start_pin()
+        from .pairing import compare_code
+        print(f"\n  PIN: {started['pin']}    compare code (must match the phone): {compare_code(svc.tls.pin)}    (valid 2 minutes)\n")
     if not agent.system.available:
         print("Note: install psutil (pip install -r requirements.txt) to report CPU, memory and disk.")
     await agent.run()
 
 
-def main():
+def main(argv=None):
     ap = argparse.ArgumentParser(description="Hubuddy agent")
     ap.add_argument("--config", help="config.toml (default: ./config.toml, then ~/.hubuddy/config.toml)")
-    ap.add_argument("--host", default="127.0.0.1", help="bind address (default 127.0.0.1)")
-    ap.add_argument("--port", type=int, default=8765)
-    ap.add_argument("--lan", action="store_true", help="listen on all interfaces (private clients only)")
-    ap.add_argument("--pair", action="store_true", help="print a new pairing code")
-    ap.add_argument("--pair-minutes", type=float, default=10)
-    ap.add_argument("--no-web", action="store_true", help="do not serve the optional web dashboard")
-    ap.add_argument("--devices-file", default=str(DEFAULT_STORE))
-    ap.add_argument("--list-devices", action="store_true")
-    ap.add_argument("--revoke", metavar="ID|all")
+    ap.add_argument("--home", default=str(HOME_DIR), help="where identity, pairings and logs are kept")
+    ap.add_argument("--host", default="0.0.0.0", help="address for phones to connect to (default: all, private clients only)")
+    ap.add_argument("--port", type=int, default=None, help="phone port (default 8765; another free one is chosen if taken)")
+    ap.add_argument("--local-port", type=int, default=DEFAULT_LOCAL_PORT, help="port of this PC's own pages (loopback only)")
+    ap.add_argument("--no-discovery", action="store_true", help="do not answer LAN discovery probes")
+    ap.add_argument("--show-invite", action="store_true", help="print a pairing QR code in this window")
+    ap.add_argument("--pin", action="store_true", help="print a PIN for pairing without a camera")
+    ap.add_argument("--list-phones", action="store_true")
+    ap.add_argument("--forget", metavar="ID|all")
+    ap.add_argument("--selftest", action="store_true", help="run the full pairing and API flow against this program and exit")
+    ap.add_argument("--selftest-output", help="write the self-test result (JSON) to this file")
     ap.add_argument("--verbose", "-v", action="store_true")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    auth = DeviceAuth(pathlib.Path(args.devices_file))
-    if args.list_devices:
-        for d in auth.devices:
-            print(f"{d['id']}  {d['name']}  created {d['created']}  last seen {d.get('last_seen', 0)}")
+    if args.selftest:
+        from .selftest import run
+        return run(args.selftest_output)
+    try:
+        svc = services.build(args.home)
+    except Exception as e:  # identity problems come with a recovery message
+        sys.exit(str(e))
+    if args.list_phones:
+        for p in svc.sessions.listing():
+            print(f"{p['id']}  {p['name']}  paired {p['created']}  last seen {p['last_seen']}")
         return
-    if args.revoke:
-        print(f"revoked {auth.revoke(args.revoke)} device(s)")
+    if args.forget:
+        n = len(svc.sessions) if args.forget == "all" else int(svc.sessions.revoke(args.forget))
+        if args.forget == "all":
+            svc.sessions.revoke_all()
+        print(f"forgot {n} phone(s)")
         return
     try:
         cfg = load(find_config(args.config))
     except ValueError as e:
         sys.exit(str(e))
     try:
-        asyncio.run(amain(args, auth, cfg))
+        asyncio.run(amain(args, svc, cfg))
     except KeyboardInterrupt:
         pass
-    except ValueError as e:  # e.g. a bad [[shortcuts]] entry
-        sys.exit(f"Config problem: {e}")
+    except (OSError, ValueError) as e:
+        sys.exit(f"Could not start: {e}")
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
