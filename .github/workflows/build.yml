@@ -189,11 +189,41 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then ver="${GITHUB_REF_NAME#v}"; else ver="${{ inputs.version }}"; fi
           git clone --quiet --depth 1 --branch feature/hubuddy-app "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" repo
           cp "assets/Hubuddy-${ver}.apk" "assets/Hubuddy-${ver}.exe" "assets/HubuddySetup-${ver}.exe" "assets/hubuddy_${ver}_all.deb" repo/releases/
+          shot="$(find "$GITHUB_WORKSPACE/assets/hubuddy-windows" -name window.png | head -n1)"
+          if [ -n "$shot" ]; then mkdir -p repo/docs/hubuddy/screenshots/pc && cp "$shot" repo/docs/hubuddy/screenshots/pc/window.png; fi
           cd repo/releases
           for f in "Hubuddy-${ver}.apk" "Hubuddy-${ver}.exe" "HubuddySetup-${ver}.exe" "hubuddy_${ver}_all.deb"; do sha256sum "$f" > "$f.sha256"; done
           cd ..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f releases
+          git add docs/hubuddy/screenshots/pc/window.png 2>/dev/null || true
           git commit -m "Add Hubuddy ${ver} downloads built by CI [skip ci]" || exit 0
+          git push origin feature/hubuddy-app
+
+  window-picture:
+    name: Commit the picture of the Windows window
+    if: github.event_name == 'workflow_dispatch' && !inputs.release
+    needs: [windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: hubuddy-windows
+          path: assets
+      - name: Add window.png to the repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shot="$(find assets -name window.png | head -n1)"
+          [ -n "$shot" ] || { echo "no picture was taken"; exit 0; }
+          git clone --quiet --depth 1 --branch feature/hubuddy-app "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" repo
+          mkdir -p repo/docs/hubuddy/screenshots/pc && cp "$shot" repo/docs/hubuddy/screenshots/pc/window.png
+          cd repo
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/hubuddy/screenshots/pc/window.png
+          git commit -m "Add a picture of the Windows window taken on a real Windows desktop [skip ci]" || exit 0
           git push origin feature/hubuddy-app

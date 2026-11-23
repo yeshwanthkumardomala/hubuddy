@@ -31,6 +31,14 @@ and files both ways, and let the phone turn into a landscape clock-and-status di
 
 ---
 
+## What's new
+
+* **3.4.0:** a new logo, a Windows window that opens instantly and never freezes, a new-generation window design (dark/light, status pill, per-phone remote switch),
+  and **keyboard chords** on the phone: hold Ctrl / Shift / Alt / Win with one finger and tap another key, F1 to F12 included.
+* **3.3.0:** no sign-in, and a rebuilt trackpad (tap, two-finger scroll/right-click, pinch zoom, drag, speed slider).
+* **3.2.0:** Linux (a small Debian package that runs without a desktop). **3.1.0:** remote control and Wake-on-LAN. **3.0.0:** QR/PIN pairing, encrypted and pinned.
+  All versions: [release notes](docs/hubuddy/RELEASE_NOTES.md).
+
 ## Connect in a minute: no developer options, no cable, no typing IPs
 
 Phone and PC just need to be on the **same Wi-Fi or LAN**, or connected by **USB tethering** (the ordinary switch in
@@ -101,7 +109,8 @@ pose as your computer. [How pairing works](docs/hubuddy/ARCHITECTURE.md#pairing-
 | **Two-way** | Send text, links and your clipboard to the PC; the PC sends text and links to the phone; files go both ways (picked with Android's own file pickers); the PC shows each phone's battery and network |
 | **PC monitor** | CPU, RAM, disk, NVIDIA GPU load, temperature and VRAM, network throughput, internet health with latency, loss and a speed test |
 | **Claude Code** | Running, idle or *waiting for permission*; 5-hour and weekly limits with reset times; tokens, per-model use and a 7-day chart |
-| **Remote control** | Touchpad, keyboard, volume and power from the phone, **off until you allow it per phone on the PC**; Wake a sleeping PC (Wake-on-LAN) |
+| **Remote control** | A real touchpad (tap, two-finger scroll and right-click, pinch zoom, drag, adjustable speed), a keyboard with **chords** (hold Ctrl/Shift/Alt/Win and tap a key, F1 to F12, A to Z), shortcuts, volume and power from the phone. **Off until you allow it per phone on the PC**; Wake a sleeping PC (Wake-on-LAN) |
+| **The PC window** | Opens instantly, follows Windows light/dark, shows the pairing QR code or PIN, the phones with a *Remote control* switch and *Forget* each, firewall and start-with-Windows settings |
 | **Controls** | Media play, pause and skip; your own PC shortcut buttons (confirmed before they run); phone shortcuts for links and apps |
 | **Calendar, weather, GitHub** | Upcoming events from any ICS link; Open-Meteo forecast for any city; repository stats and a contribution heatmap |
 | **Dock mode** | After 5 idle minutes (also on battery, stopping at 15%) a full-screen landscape display shows the clock, then each page with data in turn, jumps to Claude alerts, dims at night and guards against burn-in |
