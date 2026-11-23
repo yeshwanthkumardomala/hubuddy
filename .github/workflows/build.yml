@@ -122,10 +122,10 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then tag="$GITHUB_REF_NAME"; else tag="v${{ inputs.version }}"; fi
           ver="${tag#v}"
-          mv assets/hubuddy-android/Hubuddy.apk "assets/Hubuddy-${ver}.apk"
-          mv assets/hubuddy-android/Hubuddy.apk.sha256 "assets/Hubuddy-${ver}.apk.sha256" || true
-          mv assets/hubuddy-windows/Hubuddy.exe "assets/Hubuddy-${ver}.exe"
-          mv assets/hubuddy-windows/HubuddySetup.exe "assets/HubuddySetup-${ver}.exe"
+          mv "$(find assets/hubuddy-android -name Hubuddy.apk | head -n1)" "assets/Hubuddy-${ver}.apk"
+          rm -f assets/hubuddy-android/Hubuddy.apk.sha256
+          mv "$(find assets/hubuddy-windows -name Hubuddy.exe | head -n1)" "assets/Hubuddy-${ver}.exe"
+          mv "$(find assets/hubuddy-windows -name HubuddySetup.exe | head -n1)" "assets/HubuddySetup-${ver}.exe"
           (cd assets && sha256sum Hubuddy-${ver}.apk Hubuddy-${ver}.exe HubuddySetup-${ver}.exe > SHA256SUMS.txt)
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Hubuddy ${ver}" --generate-notes \
             "assets/Hubuddy-${ver}.apk" "assets/Hubuddy-${ver}.exe" "assets/HubuddySetup-${ver}.exe" assets/SHA256SUMS.txt
