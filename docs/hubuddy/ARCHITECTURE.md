@@ -65,5 +65,6 @@ Hubuddy turns an Android phone into a dashboard and ambient display for your Win
 android/hubuddy/   Android app and build.ps1
 agent/             PC agent, start-agent.ps1, config.example.toml, tests, optional web dashboard
 docs/hubuddy/      this documentation and screenshots
-releases/          installable APK and checksum
+releases/          downloads: phone APK and laptop agent zip, with checksums
+tools/             package_agent.py builds the laptop agent zip
 ```

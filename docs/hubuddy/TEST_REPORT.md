@@ -18,6 +18,7 @@ Platform 34, Robolectric 4.14, Python 3.13.
 | APK inspection | ✅ `com.sidya.hubuddy`, version 2.0.0, minSdk 21, INTERNET + ACCESS_NETWORK_STATE only, no native code |
 | Agent tests | ✅ **48 passed** with the optional libraries installed; ✅ 48 run (41 passed, 7 skipped for missing libraries) without them |
 | Agent run end to end (Linux) | ✅ started the real program, paired with a one-time code, read live stats and network data, 401 without a token |
+| Laptop agent download (zip) | ✅ rebuilt twice with identical checksums; unzipped into a fresh folder and run from there: paired, live stats and network readings, web dashboard served; no old-name hits; start scripts have Windows line endings |
 | Web dashboard in headless Chromium | ✅ pairs and renders; phone-width layout without horizontal scroll |
 
 ## Android tests

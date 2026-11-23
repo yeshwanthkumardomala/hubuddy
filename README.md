@@ -12,9 +12,14 @@ phone turn into a landscape clock-and-status display when you leave it alone.
 [![Tests](https://img.shields.io/badge/tests-173%20app%20%2B%2048%20agent%20passing-2EC4B6)](docs/hubuddy/TEST_REPORT.md)
 [![APK size](https://img.shields.io/badge/APK-~1%20MB-8A5A3B)](releases)
 
-### [⬇ Download the APK (v2.0.0)](https://github.com/yeshwanthkumardomala/hubuddy/raw/feature/hubuddy-app/releases/Hubuddy-2.0.0.apk)
+### Downloads (v2.0.0)
 
-<sub>Android 5.0+ · about 1 MB · [checksum](releases/Hubuddy-2.0.0.apk.sha256) · [all releases](releases)</sub>
+| 📱 Phone app | 💻 Laptop / PC agent |
+| --- | --- |
+| [**⬇ Hubuddy-2.0.0.apk**](https://github.com/yeshwanthkumardomala/hubuddy/raw/feature/hubuddy-app/releases/Hubuddy-2.0.0.apk) | [**⬇ Hubuddy-Agent-2.0.0.zip**](https://github.com/yeshwanthkumardomala/hubuddy/raw/feature/hubuddy-app/releases/Hubuddy-Agent-2.0.0.zip) |
+| Android 5.0+ · about 1 MB | Windows + Python 3.11+ · about 40 KB, double-click to start |
+
+<sub>You need both: the app on the phone and the agent on each PC. Checksums and install steps: [all releases](releases)</sub>
 
 <img src="docs/hubuddy/screenshots/phone/31-landscape-all-pcs-dark.png" width="92%" alt="Landscape: all PCs at a glance">
 
@@ -101,13 +106,14 @@ an alert), and that PC decides what it means. Details in the [architecture guide
 
 ## Quick start
 
-**1. Install the app.** Download the APK above, open it on the phone and allow *install unknown apps*, or run
-`adb install -r Hubuddy-2.0.0.apk`.
+**1. Download both** from the table above (or from [releases](releases)). Install the app: open the APK on the phone
+and allow *install unknown apps*, or run `adb install -r Hubuddy-2.0.0.apk`.
 
 **2. First login.** Use the temporary login number and PIN you built the app with (see
 [build instructions](docs/hubuddy/BUILD_INSTRUCTIONS.md)). The app makes you choose your own PIN straight away.
 
-**3. Start the agent on the PC** (Python 3.11+):
+**3. Start the agent on the PC.** Install Python 3.11+, unzip `Hubuddy-Agent-2.0.0.zip` and double-click
+`start-agent.bat` (or, from a clone of this repository, run it in PowerShell):
 
 ```powershell
 cd agent
@@ -159,7 +165,8 @@ Needs JDK 17+ and the Android SDK (Platform 34). See [build instructions](docs/h
 android/hubuddy/   Android app (Kotlin) and build.ps1
 agent/             PC agent (Python), start-agent.ps1, config.example.toml, web dashboard
 docs/hubuddy/      Architecture, build, setup, test report, release notes, screenshots
-releases/          Installable APK and checksum
+releases/          Downloads: phone APK and laptop agent zip, with checksums
+tools/             package_agent.py builds the laptop agent zip
 ```
 
 ## Documentation

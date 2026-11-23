@@ -67,6 +67,11 @@ adb devices -l
 adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
+## Laptop agent download
+
+`python tools/package_agent.py` builds `releases/Hubuddy-Agent-<version>.zip` and its checksum from `agent/`
+(without tests, caches or your `config.toml`). Same sources give the same zip.
+
 ## Screenshots
 
 `gradlew testDebugUnitTest --tests "*Screenshots*" -Pscreenshots=<folder>` renders the real screens with sample data.

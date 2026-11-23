@@ -6,7 +6,8 @@ The phone reads data from the **Hubuddy agent** on each PC or laptop.
 
 1. Install **Python 3.11 or newer** (python.org, tick "Add to PATH"). For USB mode also install the Android
    platform-tools (`adb`).
-2. Get this repository (`git clone`), then in PowerShell:
+2. Easiest: download `Hubuddy-Agent-2.0.0.zip` from `releases/`, unzip it and double-click `start-agent.bat`.
+   Or get this repository (`git clone`), then in PowerShell:
 
 ```powershell
 cd hubuddy\agent
