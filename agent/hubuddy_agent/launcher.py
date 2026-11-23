@@ -472,6 +472,11 @@ def main(argv=None) -> int:
         from .selftest import run
         out = argv[argv.index("--selftest-output") + 1] if "--selftest-output" in argv else None
         return run(out)
+    if sys.platform == "win32" and "--classic-window" not in argv:
+        # Windows: Hubuddy's page in an Edge app window with a tray icon (the old Tk window repainted badly on some laptops)
+        from . import webwindow
+        from .__main__ import web_dir
+        return webwindow.run(argv, Runtime, HOME_DIR, web_dir())
     minimized = "--minimized" in argv
     smoke = argv[argv.index("--smoke") + 1] if "--smoke" in argv else None
     try:

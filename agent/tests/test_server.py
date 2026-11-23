@@ -209,6 +209,31 @@ class LocalPage(AgentCase):
         s.close()
         self.assertTrue(self.agent.server._local.sockets[0].getsockname()[0] in ("127.0.0.1", "::1") if hasattr(self.agent.server, "_local") else True)
 
+    def test_system_routes_for_the_window(self):
+        self.assertEqual(self.agent.local("GET", "/local/system")[1]["windows"], False)
+        self.assertEqual(self.agent.local("POST", "/local/autostart", {"on": "yes"})[0], 400)
+        self.assertEqual(self.agent.local("POST", "/local/autostart", {"on": True})[0], 501)   # not Windows
+        self.assertEqual(self.agent.local("POST", "/local/quit")[0], 501)                       # started from a terminal
+        quit_called = []
+        self.agent.server.on_quit = lambda: quit_called.append(1)
+        self.assertTrue(self.agent.local("GET", "/local/system")[1]["canQuit"])
+        self.assertEqual(self.agent.local("POST", "/local/quit")[0], 200)
+        import time
+        deadline = time.time() + 2
+        while not quit_called and time.time() < deadline:
+            time.sleep(0.05)
+        self.assertEqual(quit_called, [1])
+        c = http.client.HTTPConnection("127.0.0.1", self.agent.server.local_port, timeout=5)
+        c.request("POST", "/local/quit", b"{}", {"Content-Type": "application/json"})
+        self.assertEqual(c.getresponse().status, 403, "the page's own action header is required")
+
+    def test_page_serves_the_logo(self):
+        c = http.client.HTTPConnection("127.0.0.1", self.agent.server.local_port, timeout=5)
+        c.request("GET", "/logo.png")
+        r = c.getresponse()
+        self.assertEqual((r.status, r.getheader("Content-Type")), (200, "image/png"))
+        self.assertTrue(r.read().startswith(b"\x89PNG"))
+
     def test_activity_log_records_pairing(self):
         self.agent.pair_by_qr("Vivo")
         events = self.agent.local("GET", "/local/activity")[1]["events"]

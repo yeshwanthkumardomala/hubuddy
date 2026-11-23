@@ -1,6 +1,6 @@
 ; Inno Setup recipe for HubuddySetup.exe.   iscc installer\Hubuddy.iss /DAppVersion=3.0.0 /DSourceExe=dist\Hubuddy.exe
 #ifndef AppVersion
-  #define AppVersion "3.4.0"
+  #define AppVersion "3.5.0"
 #endif
 #ifndef SourceExe
   #define SourceExe "..\dist\Hubuddy.exe"

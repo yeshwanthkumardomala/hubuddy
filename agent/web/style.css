@@ -15,3 +15,4 @@ input, textarea, select { background:var(--card2); color:var(--text); width:100%
 .pin { font-size:44px; letter-spacing:.25em; font-weight:300; text-align:center; } .code { font:600 22px ui-monospace, Consolas, monospace; text-align:center; letter-spacing:.1em; color:var(--accent); }
 canvas { background:#fff; border-radius:8px; image-rendering:pixelated; display:block; margin:8px auto; max-width:100%; }
 .btns { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+.check{display:flex;gap:8px;align-items:center;margin:10px 0}.check input{width:18px;height:18px}

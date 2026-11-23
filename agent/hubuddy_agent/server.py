@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import pathlib
+import sys
 import time
 import urllib.parse
 from collections import defaultdict, deque
@@ -100,6 +101,7 @@ class AgentServer:
         self._rc_held: dict[str, set] = {}   # mouse buttons a phone is holding down
         self._rc_last: dict[str, float] = {}
         self._watchdog = None
+        self.on_quit = None   # set by the program that owns this server (the tray); lets the page quit it
         self.web_dir = pathlib.Path(web_dir).resolve() if web_dir else None
         self.clock = clock
         self.host_ok = make_host_check(services.name, tls_name=services.tls.name)
@@ -570,6 +572,26 @@ class AgentServer:
             if changed:
                 svc.activity.record("remote_allowed" if on else "remote_blocked", id=sid)
             return ok(changed=changed)
+        if p == "/local/system" and m == "GET":
+            from . import winsetup
+            return Response(200, {"windows": sys.platform == "win32", "autostart": winsetup.autostart_enabled(), "canQuit": self.on_quit is not None})
+        if p == "/local/autostart" and m == "POST":
+            from . import winsetup
+            on = (await req.json()).get("on")
+            if not isinstance(on, bool):
+                raise HttpError(400, "on must be true or false")
+            if not winsetup.set_autostart(on):
+                raise HttpError(501, "Could not change the Windows startup setting (this works on Windows only).")
+            return ok(on=on)
+        if p == "/local/firewall" and m == "POST":
+            from . import winsetup
+            done = await asyncio.get_running_loop().run_in_executor(None, winsetup.allow_through_firewall, self.port, svc.discovery_port)
+            return ok(done=bool(done))
+        if p == "/local/quit" and m == "POST":
+            if self.on_quit is None:
+                raise HttpError(501, "This copy of Hubuddy was started from a terminal: press Ctrl+C there.")
+            asyncio.get_running_loop().call_later(0.3, self.on_quit)
+            return ok()
         if p == "/local/forget-all" and m == "POST":
             if (await req.json()).get("confirm") != "forget-all":
                 raise HttpError(400, "confirm forgetting all phones")

@@ -13,3 +13,6 @@ winrt-Windows.Foundation>=2.2; sys_platform == "win32"
 winrt-Windows.Foundation.Collections>=2.2; sys_platform == "win32"
 winrt-Windows.Media.Control>=2.2; sys_platform == "win32"
 winrt-Windows.Storage.Streams>=2.2; sys_platform == "win32"
+# Windows tray icon (the window itself is an Edge/Chrome app window showing Hubuddy's page)
+pystray>=0.19; sys_platform == "win32"
+pillow>=10; sys_platform == "win32"

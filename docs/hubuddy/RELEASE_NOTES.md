@@ -1,5 +1,17 @@
 # Release notes
 
+## 3.5.0 — The Windows window, rebuilt without Tk (2026-11-23)
+
+* **The glitches are gone by design.** A frame-by-frame look at the recording showed the window's bottom edge jumping, a grey unpainted strip flashing under the buttons
+  and one fully black frame: Windows' built-in Tk toolkit repainting badly on a laptop display. The Windows program no longer uses Tk. Its window is now Hubuddy's own
+  page shown in a **Microsoft Edge (or Chrome) app window** (no address bar, own window), which draws smoothly and sharply at any display scaling, with a **tray icon**
+  (Open Hubuddy, Quit Hubuddy). Closing the window leaves Hubuddy running in the tray; *Quit* ends it. If Edge and Chrome are both missing it opens your default browser.
+* **The page does everything the old window did:** pairing QR and PIN, the phone list with a *Remote control* switch and *Forget* each, files, messages, activity, and now
+  *Start with Windows*, *Allow through Windows Firewall* and *Quit Hubuddy*. Parts of the page are redrawn only when their data changes (no flicker).
+* **Checked on real Windows in CI:** the built program is started in tray mode, its page is fetched, a picture is taken with headless Edge, and the program is quit from the page.
+* `--classic-window` still starts the old Tk window if you want it. Linux and the headless mode are unchanged.
+* **Not verified:** how it looks on your own laptop screen; please tell me if anything still looks wrong and describe what you see.
+
 ## 3.4.0 — Logo, a window that never freezes, chord keyboard (2026-11-23)
 
 * **Logo:** a new Hubuddy logo (an H whose crossbar is a signal pulse) on the phone app icon and header, the Windows program and installer icon, the

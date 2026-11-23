@@ -29,8 +29,8 @@ android {
         applicationId 'com.sidya.hubuddy'
         minSdk 21          // Android 5.0+: virtually every Android phone in use (Vivo 1902 is Android 9)
         targetSdk 34
-        versionCode 10
-        versionName '3.4.0'
+        versionCode 11
+        versionName '3.5.0'
         buildConfigField 'String', 'BOOTSTRAP_LOGIN', "\"${bootstrapLogin}\""
         buildConfigField 'String', 'BOOTSTRAP_PIN', "\"${bootstrapPin}\""
         resourceConfigurations += ['en']

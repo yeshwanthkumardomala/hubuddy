@@ -27,7 +27,11 @@
     <p class="dim">Files you add here appear on the phone. Files from the phone arrive in <span id="root"></span>\Received.</p>
     <input type="file" id="file-in"><div id="to-phone"></div><h2 style="margin-top:14px">Received from phones</h2><div id="received"></div>
   </section>
-  <section class="card"><h2>This PC</h2><div id="info"></div><p class="dim">If a phone cannot find this PC, allow Hubuddy through Windows Firewall for private networks (ports shown above).</p></section>
+  <section class="card"><h2>This PC</h2><div id="info"></div><p class="dim">If a phone cannot find this PC, allow Hubuddy through the firewall for private networks (ports shown above).</p>
+    <div id="sys-win" hidden><label class="check"><input type="checkbox" id="sys-autostart"> Start Hubuddy with Windows</label>
+    <div class="btns"><button id="sys-firewall" class="alt">Allow through Windows Firewall (private networks)</button></div></div>
+    <p class="dim" id="sys-note"></p>
+    <div class="btns"><button id="sys-quit" class="bad" hidden>Quit Hubuddy</button></div></section>
   <section class="card" style="grid-column:1/-1"><h2>Activity</h2><div id="activity"></div></section>
 </main>
 <script src="/app.js"></script>

@@ -5,7 +5,7 @@ block_cipher = None
 agent = SPECPATH  # the folder holding this file (PyInstaller sets SPECPATH)
 
 hidden = (collect_submodules("hubuddy_agent") + collect_submodules("winrt")
-          + ["tkinter", "tkinter.ttk", "tkinter.messagebox", "segno", "cryptography.hazmat.primitives.asymmetric.ec", "zoneinfo", "tzdata"])
+          + ["tkinter", "tkinter.ttk", "tkinter.messagebox", "segno", "cryptography.hazmat.primitives.asymmetric.ec", "zoneinfo", "tzdata", "pystray", "pystray._win32", "PIL", "PIL.Image"])
 
 a = Analysis(
     [f"{agent}/hubuddy_launcher.py"],
