@@ -8,6 +8,8 @@ import ctypes
 import subprocess
 import sys
 
+from . import hiddenproc
+
 MAX_EVENTS = 64
 MAX_DELTA = 2048
 MAX_TEXT = 500
@@ -209,7 +211,7 @@ class WindowsBackend(Backend):
     def power(self, action):
         argv = {"sleep": ["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"], "restart": ["shutdown", "/r", "/t", "15"],
                 "shutdown": ["shutdown", "/s", "/t", "15"], "abort": ["shutdown", "/a"]}[action]
-        subprocess.Popen(argv, shell=False, creationflags=0x08000000)
+        hiddenproc.popen(argv, shell=False)
 
     def battery(self):
         try:
@@ -234,7 +236,7 @@ class LinuxBackend(Backend):
     def __init__(self, which=None, run=None):
         import shutil
         self.which = which or shutil.which
-        self.run_cmd = run or (lambda argv: subprocess.run(argv, shell=False, timeout=5, capture_output=True))
+        self.run_cmd = run or (lambda argv: hiddenproc.run(argv, shell=False, timeout=5, capture_output=True))
 
     def _tool(self, *names):
         for n in names:

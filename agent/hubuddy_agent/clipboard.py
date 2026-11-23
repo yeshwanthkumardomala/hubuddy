@@ -5,6 +5,8 @@ import shutil
 import subprocess
 import sys
 
+from . import hiddenproc
+
 CF_UNICODETEXT = 13
 GMEM_MOVEABLE = 0x0002
 
@@ -34,7 +36,7 @@ def set_text_windows(text: str) -> bool:
 LINUX_TOOLS = (["wl-copy"], ["xclip", "-selection", "clipboard"], ["xsel", "--clipboard", "--input"])
 
 
-def set_text_linux(text: str, which=shutil.which, run=subprocess.run) -> bool:
+def set_text_linux(text: str, which=shutil.which, run=hiddenproc.run) -> bool:
     wayland = bool(os.environ.get("WAYLAND_DISPLAY"))
     tools = sorted(LINUX_TOOLS, key=lambda t: 0 if (t[0] == "wl-copy") == wayland else 1)
     for argv in tools:

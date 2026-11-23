@@ -107,3 +107,33 @@ class Help(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HiddenProcesses(unittest.TestCase):
+    """No helper program may ever pop up a console window on Windows (the cause of a terminal flashing every few seconds)."""
+
+    def test_windows_gets_the_hidden_flags_and_other_systems_nothing(self):
+        from hubuddy_agent import hiddenproc
+        with mock.patch.object(sys, "platform", "win32"):
+            kw = hiddenproc.no_window()
+        self.assertEqual(kw["creationflags"], 0x08000000)
+        with mock.patch.object(sys, "platform", "linux"):
+            self.assertEqual(hiddenproc.no_window(), {})
+
+    def test_the_gpu_reader_and_other_helpers_use_the_hidden_runner(self):
+        import inspect
+        from hubuddy_agent import hiddenproc
+        from hubuddy_agent.collectors import system
+        self.assertIs(inspect.signature(system.read_nvidia).parameters["run"].default, hiddenproc.run)
+        self.assertIs(inspect.signature(clipboard.set_text_linux).parameters["run"].default, hiddenproc.run)
+
+    def test_the_program_files_that_start_helpers_do_not_use_bare_subprocess_run(self):
+        import pathlib
+        root = pathlib.Path(__file__).resolve().parent.parent / "hubuddy_agent"
+        allowed = {"hiddenproc.py", "webwindow.py", "claude_statusline.py"}   # statusline runs inside Claude Code, not inside Hubuddy
+        for f in list(root.glob("*.py")) + list(root.glob("collectors/*.py")):
+            if f.name in allowed:
+                continue
+            text = f.read_text()
+            self.assertNotIn("subprocess.run(", text, f.name)
+            self.assertNotIn("subprocess.Popen(", text.replace("collectors/shortcuts", ""), f.name) if f.name != "shortcuts.py" else None

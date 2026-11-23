@@ -2,6 +2,8 @@
 import subprocess
 import sys
 
+from . import hiddenproc
+
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
 VALUE = "Hubuddy"
 RULE_TCP, RULE_UDP = "Hubuddy phones (TCP)", "Hubuddy discovery (UDP)"
@@ -32,8 +34,8 @@ def allow_through_firewall(tcp_port: int, udp_port: int) -> bool:
         return False
     exe = sys.executable if getattr(sys, "frozen", False) else None
     try:
-        r = subprocess.run(["powershell", "-NoProfile", "-Command", elevated_script(firewall_commands(tcp_port, udp_port, exe))],
-                           capture_output=True, timeout=120, creationflags=0x08000000)   # no console window flashing up
+        r = hiddenproc.run(["powershell", "-NoProfile", "-Command", elevated_script(firewall_commands(tcp_port, udp_port, exe))],
+                           capture_output=True, timeout=120)   # hiddenproc: no console window flashing up
         return r.returncode == 0
     except (OSError, subprocess.SubprocessError):
         return False

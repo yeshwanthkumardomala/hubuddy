@@ -15,11 +15,11 @@ and files both ways, and let the phone turn into a landscape clock-and-status di
 [![Python](https://img.shields.io/badge/PC%20program-Python%203.11%2B-3776AB?logo=python&logoColor=white)](agent)
 [![Build](https://github.com/yeshwanthkumardomala/hubuddy/actions/workflows/build.yml/badge.svg?branch=feature%2Fhubuddy-app)](https://github.com/yeshwanthkumardomala/hubuddy/actions/workflows/build.yml)
 
-### Downloads (v3.5.0)
+### Downloads (v3.5.1)
 
 | 📱 Phone app | 💻 Windows program | 💻 Windows installer | 🐧 Debian / Ubuntu / Linux |
 | --- | --- | --- | --- |
-| [**Hubuddy-3.5.0.apk**](releases/Hubuddy-3.5.0.apk) | [**Hubuddy-3.5.0.exe**](releases/Hubuddy-3.5.0.exe) | [**HubuddySetup-3.5.0.exe**](releases/HubuddySetup-3.5.0.exe) | [**hubuddy_3.5.0_all.deb**](releases/hubuddy_3.5.0_all.deb) |
+| [**Hubuddy-3.5.1.apk**](releases/Hubuddy-3.5.1.apk) | [**Hubuddy-3.5.1.exe**](releases/Hubuddy-3.5.1.exe) | [**HubuddySetup-3.5.1.exe**](releases/HubuddySetup-3.5.1.exe) | [**hubuddy_3.5.1_all.deb**](releases/hubuddy_3.5.1_all.deb) |
 | Android 5.0+ · about 170 KB | Windows 10/11 · portable, no install | adds Start menu, firewall rule, autostart option | any CPU, no desktop needed · about 100 KB |
 
 <sub>You need the app on the phone and the program on each PC. Checksums, install steps and the
@@ -33,7 +33,7 @@ and files both ways, and let the phone turn into a landscape clock-and-status di
 
 ## What's new
 
-* **3.5.0:** the Windows window is now an Edge app window showing Hubuddy's page, with a tray icon (no more repaint glitches). **3.4.0:** a new logo, a Windows window that opens instantly and never freezes, a new-generation window design (dark/light, status pill, per-phone remote switch),
+* **3.5.1:** no more flashing terminal (the cause of the glitching). The Windows window is now an Edge app window showing Hubuddy's page, with a tray icon (no more repaint glitches). **3.4.0:** a new logo, a Windows window that opens instantly and never freezes, a new-generation window design (dark/light, status pill, per-phone remote switch),
   and **keyboard chords** on the phone: hold Ctrl / Shift / Alt / Win with one finger and tap another key, F1 to F12 included.
 * **3.3.0:** no sign-in, and a rebuilt trackpad (tap, two-finger scroll/right-click, pinch zoom, drag, speed slider).
 * **3.2.0:** Linux (a small Debian package that runs without a desktop). **3.1.0:** remote control and Wake-on-LAN. **3.0.0:** QR/PIN pairing, encrypted and pinned.
@@ -145,9 +145,9 @@ that PC decides what it means. Details in the [architecture guide](docs/hubuddy/
 
 ## Install on the PC
 
-* **Installer (recommended):** run `HubuddySetup-3.5.0.exe`. It adds a Start menu entry, can allow phones through the
+* **Installer (recommended):** run `HubuddySetup-3.5.1.exe`. It adds a Start menu entry, can allow phones through the
   Windows Firewall for **private** networks only, and can start Hubuddy when you sign in.
-* **Portable:** run `Hubuddy-3.5.0.exe` anywhere. Click *Allow through Windows Firewall* in its window once.
+* **Portable:** run `Hubuddy-3.5.1.exe` anywhere. Click *Allow through Windows Firewall* in its window once.
 * **From source:** Python 3.11+, `pip install -r agent/requirements.txt`, `python -m hubuddy_agent.launcher`.
 
 The programs are not code-signed, so Windows SmartScreen may say "unknown publisher": choose *More info → Run anyway*.
@@ -157,7 +157,7 @@ in [PC setup and API](docs/hubuddy/API_SETUP.md).
 ## Install on Linux (Debian 12, Ubuntu 22.04+, light installs, old PCs)
 
 ```bash
-sudo apt install ./hubuddy_3.5.0_all.deb       # pulls in python3, psutil and cryptography from your distribution
+sudo apt install ./hubuddy_3.5.1_all.deb       # pulls in python3, psutil and cryptography from your distribution
 hubuddy --show-invite                          # prints a pairing QR code in the terminal (or: hubuddy --pin)
 systemctl --user enable --now hubuddy          # optional: start at login, runs without a window
 hubuddy --firewall-help                        # ufw / firewalld commands for your private network
@@ -170,7 +170,7 @@ from source with `pip install -r agent/requirements.txt` and `python -m hubuddy_
 
 ## Install on the phone
 
-Open `Hubuddy-3.5.0.apk` on the phone and allow *install unknown apps*. There is **no sign-in**: the app opens straight to the dashboard.
+Open `Hubuddy-3.5.1.apk` on the phone and allow *install unknown apps*. There is **no sign-in**: the app opens straight to the dashboard.
 If other people use the phone, switch on *Settings → Security & app lock* and choose your own PIN.
 
 ## Compatibility

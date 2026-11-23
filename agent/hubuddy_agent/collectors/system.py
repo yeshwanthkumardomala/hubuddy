@@ -3,6 +3,8 @@ import logging
 import os
 import platform
 import subprocess
+
+from .. import hiddenproc
 import sys
 import time
 
@@ -17,7 +19,7 @@ GPU_QUERY = "name,utilization.gpu,temperature.gpu,memory.used,memory.total"
 GPU_RETRY_S = 60
 
 
-def read_nvidia(run=subprocess.run) -> dict | None:
+def read_nvidia(run=hiddenproc.run) -> dict | None:
     """First NVIDIA GPU's readings, or None when there is no NVIDIA driver / tool."""
     try:
         out = run(["nvidia-smi", f"--query-gpu={GPU_QUERY}", "--format=csv,noheader,nounits"],

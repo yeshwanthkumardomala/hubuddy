@@ -1,5 +1,15 @@
 # Release notes
 
+## 3.5.1 — The real cause of the glitching: a flashing terminal (2026-11-23)
+
+* **Fixed: a terminal window flashed on screen every few seconds.** A closer look at the recording showed a small Windows console bar appearing at the bottom of the screen exactly
+  when the window glitched. Hubuddy reads the graphics card by running `nvidia-smi` every 5 seconds; on Windows, a program with no console of its own that starts a console
+  program makes Windows open a new console window for it, for a split second, each time. That flash stole focus from the Hubuddy window (its title greyed out) and made the screen flicker.
+  Every helper command Hubuddy starts (GPU reader, firewall helper, power commands, clipboard) now runs fully hidden, and a test checks that no program file starts a helper without the
+  hidden flags. This is on top of 3.5.0's Edge app window, which removed the separate Tk repaint problem.
+* Tray mode and the app window are unchanged from 3.5.0.
+* **Not verified:** on your laptop. If anything still flashes, tell me when it happens (for example right after pressing a button) so I can find the next cause.
+
 ## 3.5.0 — The Windows window, rebuilt without Tk (2026-11-23)
 
 * **The glitches are gone by design.** A frame-by-frame look at the recording showed the window's bottom edge jumping, a grey unpainted strip flashing under the buttons
