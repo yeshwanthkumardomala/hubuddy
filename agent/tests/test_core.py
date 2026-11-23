@@ -252,7 +252,7 @@ class Discovery(unittest.TestCase):
         out = discovery.reply_for(b"hubuddy:discover:v1", self.INFO)
         self.assertTrue(out.startswith(b"hubuddy:here:v1:"))
         self.assertEqual(json.loads(out[len(b"hubuddy:here:v1:"):])["port"], 8765)
-        for junk in (b"", b"hello", b"x" * 65, b"hubuddy:discover:v2", b"\xff\xfe", b"windock:discover:v3"):
+        for junk in (b"", b"hello", b"x" * 65, b"hubuddy:discover:v2", b"\xff\xfe", b"other:discover:v3"):
             self.assertIsNone(discovery.reply_for(junk, self.INFO), junk)
 
     def test_reply_never_exceeds_the_probe_by_much_and_has_no_secrets(self):

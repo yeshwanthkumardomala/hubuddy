@@ -159,9 +159,20 @@ class AgentServer:
                     except Exception:
                         log.exception("request failed")
                         resp, keep = Response(500, {"error": "internal error"}), False
-                    if not req._consumed and req.length:
-                        keep = False  # an unread body would corrupt the next request on this connection
+                    unread = not req._consumed and req.length > 0
+                    if unread and req.length <= JSON_LIMIT:
+                        # Read a small unused body first: on Windows, closing a socket that still holds unread data resets
+                        # the connection and the phone would never see the reply. Reading it also keeps the connection usable.
+                        try:
+                            await asyncio.wait_for(reader.readexactly(req.length), 5)
+                            req._consumed = unread = False
+                        except (asyncio.IncompleteReadError, asyncio.TimeoutError, ConnectionError):
+                            return
+                    if unread:
+                        keep = False  # an unread large body would corrupt the next request on this connection
                     await self._send(writer, resp, keep)
+                    if unread:
+                        await self._discard(reader, req.length)
                     if not keep:
                         return
             except ConnectionError:
@@ -171,6 +182,21 @@ class AgentServer:
                     writer.close()
                 except Exception:
                     pass
+
+    @staticmethod
+    async def _discard(reader: asyncio.StreamReader, length: int, limit: int = 4_000_000, seconds: float = 2.0) -> None:
+        """After replying to a request whose body was not used, swallow what the sender is still sending (briefly), so
+        closing the connection does not reset it before the reply arrives."""
+        left = min(length, limit)
+        try:
+            async with asyncio.timeout(seconds):
+                while left > 0:
+                    chunk = await reader.read(min(65536, left))
+                    if not chunk:
+                        return
+                    left -= len(chunk)
+        except (TimeoutError, ConnectionError):
+            pass
 
     async def _read_request(self, reader, peer, local, writer) -> Request:
         head = await asyncio.wait_for(reader.readuntil(b"\r\n\r\n"), IDLE_S)

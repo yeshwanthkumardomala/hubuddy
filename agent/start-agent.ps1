@@ -1,24 +1,19 @@
 <#
 .SYNOPSIS
-    Starts the Hubuddy agent on Windows. The first run creates a private Python environment (.venv) and
-    installs the requirements.
+    Starts Hubuddy on Windows from source (most people should use Hubuddy.exe instead).
+    The first run creates a private Python environment (.venv) and installs the requirements.
 .EXAMPLE
-    .\start-agent.ps1            # USB mode: runs `adb reverse` for you, listens on 127.0.0.1 only
-    .\start-agent.ps1 -Lan       # Wi-Fi mode: reachable from your local network (private addresses only)
-    .\start-agent.ps1 -Pair      # print a new pairing code
+    .\start-agent.ps1                 # starts the PC side; open http://127.0.0.1:8766/ on this PC to pair a phone
+    .\start-agent.ps1 -Window         # the same, in the Hubuddy window (needs Python with Tk, included by default)
+    .\start-agent.ps1 -Invite         # also print a pairing QR code in this window
+    .\start-agent.ps1 -Pin            # also print a PIN for pairing without a camera
 #>
 [CmdletBinding()]
-param(
-    [int]$Port = 8765,
-    [switch]$Lan,
-    [switch]$Pair,
-    [switch]$NoAdb
-)
+param([switch]$Window, [switch]$Invite, [switch]$Pin)
 
 $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $PSScriptRoot
 
-# Python 3.11 or newer
 $hasPy = [bool](Get-Command py -ErrorAction SilentlyContinue)
 $hasPython = [bool](Get-Command python -ErrorAction SilentlyContinue)
 if (-not ($hasPy -or $hasPython)) { Write-Host 'Python 3.11+ not found. Install it from python.org and tick "Add to PATH".' -ForegroundColor Red; exit 1 }
@@ -34,19 +29,9 @@ if (-not (Test-Path $venvPython)) {
 $ver = & $venvPython -c "import sys; print('%d.%d' % sys.version_info[:2])"
 if ([version]$ver -lt [version]'3.11') { Write-Host "Python 3.11+ is required (found $ver). Delete .venv and install a newer Python." -ForegroundColor Red; exit 1 }
 
-# USB mode: forward the phone's 127.0.0.1:$Port to this PC.
-if (-not $Lan -and -not $NoAdb) {
-    if (Get-Command adb -ErrorAction SilentlyContinue) {
-        & adb reverse "tcp:$Port" "tcp:$Port"
-        if ($LASTEXITCODE -eq 0) { Write-Host "adb reverse tcp:$Port tcp:$Port  (phone -> PC) OK" }
-        else { Write-Host 'adb reverse failed: is the phone connected with USB debugging allowed? Continuing.' -ForegroundColor Yellow }
-    } else {
-        Write-Host "adb not on PATH; run  adb reverse tcp:$Port tcp:$Port  yourself after connecting the phone." -ForegroundColor Yellow
-    }
-}
-
-$agentArgs = @('-m', 'hubuddy_agent', '--port', "$Port")
-if ($Lan) { $agentArgs += '--lan' }
-if ($Pair) { $agentArgs += '--pair' }
+if ($Window) { & $venvPython -m hubuddy_agent.launcher; exit $LASTEXITCODE }
+$agentArgs = @('-m', 'hubuddy_agent')
+if ($Invite) { $agentArgs += '--show-invite' }
+if ($Pin) { $agentArgs += '--pin' }
 & $venvPython @agentArgs
 exit $LASTEXITCODE

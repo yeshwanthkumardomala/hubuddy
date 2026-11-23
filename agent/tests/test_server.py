@@ -81,6 +81,12 @@ class QrPairing(AgentCase):
         self.assertEqual(p.call("GET", "/api/nope")[0], 404)
         self.assertEqual(p.call("GET", "/")[0], 404, "the LAN side serves no web pages")
 
+    def test_a_refused_upload_still_gets_its_reply(self):
+        # The sender is still sending a large body when the PC refuses it; the reply must arrive (Windows resets otherwise).
+        p = self.agent.phone()
+        s, _ = p.call("PUT", "/api/files/upload?name=big.bin", raw=b"x" * 2_000_000, token=False)
+        self.assertEqual(s, 401)
+
     def test_malformed_bodies(self):
         p = self.agent.pair_by_qr()
         self.assertEqual(p.call("POST", "/api/send", raw=b"not json")[0], 400)
