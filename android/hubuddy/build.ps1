@@ -92,5 +92,5 @@ if ($Release) {
     if (Test-Path $rel) { Write-Host ("Release APK: {0} ({1:N0} bytes)" -f (Get-Item $rel).FullName, (Get-Item $rel).Length) }
 }
 Write-Host ''
-Write-Host 'Install on the phone (USB debugging on):  adb install -r "app\build\outputs\apk\debug\app-debug.apk"'
+Write-Host 'Install on the phone: copy app\build\outputs\apk\debug\app-debug.apk to it and open it (allow "install unknown apps")'
 exit 0

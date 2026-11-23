@@ -165,7 +165,7 @@ class DiscoveryTest {
         assertNull(Discovery.parse(String(here()).replace(id, "not-an-id"), "192.168.1.5"))
         assertNull(Discovery.parse(String(here()).replace("8765", "0"), "192.168.1.5"))
         assertNull(Discovery.parse(String(here()).replace("\"hubuddy\"", "\"other\""), "192.168.1.5"))
-        assertNull(Discovery.parse("windock:here:v1:{}", "192.168.1.5"))
+        assertNull(Discovery.parse("other:here:v1:{}", "192.168.1.5"))
         assertEquals("Desk bPC", Discovery.parse(String(here()).replace("Desk PC", "Desk <b>PC"), "192.168.1.5")!!.name.replace("<", "").replace(">", "").replace("/", "").let { it }.ifEmpty { "x" }.let { "Desk bPC" })
         assertFalse(Discovery.parse(String(here()).replace("Desk PC", "Desk <b>PC"), "192.168.1.5")!!.name.contains("<"))
     }

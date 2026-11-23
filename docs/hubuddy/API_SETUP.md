@@ -1,31 +1,41 @@
-# Agent setup and API
+# PC setup and API
 
-The phone reads data from the **Hubuddy agent** on each PC or laptop.
+The phone reads data from **Hubuddy on each PC or laptop**. You do not need Developer options, a cable
+or any typing of IP addresses.
 
-## 1. Install the agent on a PC
+## 1. Install Hubuddy on a PC
 
-1. Install **Python 3.11 or newer** (python.org, tick "Add to PATH"). For USB mode also install the Android
-   platform-tools (`adb`).
-2. Easiest: download `Hubuddy-Agent-2.0.0.zip` from `releases/`, unzip it and double-click `start-agent.bat`.
-   Or get this repository (`git clone`), then in PowerShell:
+**Easiest (Windows 10/11):** download `HubuddySetup-<version>.exe` (installer) or `Hubuddy-<version>.exe` (portable, no
+install) from the [Releases page](https://github.com/yeshwanthkumardomala/hubuddy/releases) or the `releases/` folder, and
+open it. Windows may show "unknown publisher" because the program is not code-signed: choose *More info → Run anyway*.
+The installer can add a Windows Firewall rule for **private** networks only and start Hubuddy when you sign in.
+
+**From source (any OS with Python 3.11+):**
 
 ```powershell
 cd hubuddy\agent
-.\start-agent.ps1            # USB mode: runs adb reverse for you, listens on 127.0.0.1 only
-.\start-agent.ps1 -Lan       # Wi-Fi mode: reachable from your local network (private addresses only)
-.\start-agent.ps1 -Pair      # print a new pairing code
+.\start-agent.ps1 -Window        # the Hubuddy window (Windows)
+.\start-agent.ps1 -Invite        # or: print a pairing QR code in this window
 ```
 
-The first run creates a private Python environment (`.venv`) and installs `requirements.txt`. The agent prints
-a pairing code:
+Manual equivalent: `pip install -r requirements.txt`, then `python -m hubuddy_agent [--show-invite] [--pin]`.
+Identity, paired phones and logs live in `%USERPROFILE%\.hubuddy`. Manage phones with `--list-phones` and `--forget <id|all>`,
+or use the window / the page at `http://127.0.0.1:8766/`.
 
-```
-  Pairing code: 482913   (valid 10 min, single use)
-```
+## 2. Connect the phone (three ways, all encrypted)
 
-Manual equivalent: `pip install -r requirements.txt` then `python -m hubuddy_agent [--lan] [--pair] [--port 8765]`.
-Manage phones with `--list-devices` and `--revoke <id|all>`. Pairings are stored as SHA-256 hashes in
-`%USERPROFILE%\.hubuddy\agent_devices.json`.
+Phone and PC must be on the same network: the same Wi-Fi, the same router by cable, or **USB tethering** (phone
+Settings → Hotspot & tethering → *USB tethering*, an ordinary switch, no developer options).
+
+| Way | Steps |
+| --- | --- |
+| **QR code** (strongest) | PC: Hubuddy → *Pair a phone*. Phone: Settings → Add a PC or laptop → *Scan QR code*. The QR carries the PC's identity and a one-time 2-minute secret |
+| **PIN** (no camera) | PC: Hubuddy → *Pair with a PIN* (shows a PIN and a compare code). Phone: *Find PCs on this network* → tap the PC → check that the compare code matches the PC's → enter the PIN |
+| **Paste or type** | *Paste invitation* (copy the text under the QR) or *Enter address* if discovery is blocked |
+
+After pairing, the phone finds the PC again by itself if its address changes (it keeps the PC's permanent id).
+**Many phones, many PCs:** a PC accepts up to 32 phones and a phone keeps up to 8 PCs; each pair has its own key.
+Forget a phone on the PC (window or page) or unpair a PC on the phone at any time.
 
 ## 2. Optional: configuration
 
@@ -52,48 +62,45 @@ python -m hubuddy_agent.claude_setup remove   # removes only Hubuddy's entries
 Your existing hooks are kept, and an existing status line is chained (it keeps working). Restart Claude Code
 sessions afterwards.
 
-## 4. Connect the phone
+## 4. API reference
 
-**USB:** run the agent (USB mode), connect the phone with USB debugging on, make sure `adb reverse tcp:8765 tcp:8765`
-has run (the script does it; run it again after replugging). In the app: Settings → PCs and laptops → USB →
-*Test connection* → enter the pairing code → *Pair*.
-
-**Wi-Fi:** start the agent with `-Lan` and allow Python through Windows Firewall for **Private** networks only.
-Find the PC's IPv4 address with `ipconfig` (for example `192.168.1.100`, only an example). In the app choose
-*Local Wi-Fi*, enter `192.168.1.100:8765`, *Save*, *Test connection*, then pair. The app accepts only loopback,
-private (10/8, 172.16/12, 192.168/16), link-local and `*.local` addresses. Never forward port 8765 on your router.
-
-**Several PCs (up to 8):** run an agent on each, then in the app tap *+ Add PC*, give it a name, enter its address
-and pair it. USB serves one cable, so use Wi-Fi for the others. See them together on Monitor → All PCs.
-
-## 5. API reference
-
-Base URL `http://127.0.0.1:8765` (USB) or `http://<PC IP>:8765`. Everything except `ping` and `pair` needs
-`Authorization: Bearer <device token>`. Responses are JSON, `Cache-Control: no-store`.
+Base URL `https://<PC address>:<port>` (default port 8765; another free port is used if it is busy and is advertised by
+discovery). The certificate is signed by the PC's own authority (pinned by the phone), with the name
+`host-<hostId>.hubuddy.invalid`. Everything except `/health` and the pairing calls needs `Authorization: Bearer <token>`.
+Responses are JSON, `Cache-Control: no-store`. Only private-network clients are served.
 
 | Method | Path | Body | Response |
 | --- | --- | --- | --- |
-| GET | `/api/ping` | — | `{"ok":true,"service":"hubuddy-agent","version":"2.0.0"}` |
-| POST | `/api/pair` | `{"code":"482913","device":"phone"}` | `{"token":"…"}` · 401 wrong code · 403 closed · 429 too many |
-| GET | `/api/snapshot` | — | `{server_time, pc, stats, claude, alert, sessions_info, media, calendar, network, shortcuts, github}`; a section is `null` when unavailable |
-| GET | `/api/status` `/api/stats` `/api/claude` `/api/alerts` `/api/calendar` `/api/media` `/api/network` `/api/shortcuts` `/api/github` | — | `{available, data}` |
-| POST | `/api/media` | `{"cmd":"toggle"|"next"|"prev"}` | `{"ok":true}` |
-| POST | `/api/shortcuts/run` | `{"id":0}` | `{"ok":true}` · 400 unknown id |
-| POST | `/api/alerts/action` | `{"id":"…","action":"dismiss"}` | `{"ok":true}` |
-| POST | `/api/speedtest` | `{}` | `{"ok":true}` (at most one per 2 minutes) |
+| GET | `/health` | none | `{ok, app, version, hostId, name, port, ca}` |
+| POST | `/api/pairing/claim` | `{hostId, secret, device}` | `{ok, hostId, token}` (QR invitation, single use) |
+| POST | `/api/pairing/pin-claim` | `{hostId, pin, device}` | `{ok, hostId, token}` (PIN, single use) |
+| GET | `/api/snapshot` | none | `{server_time, pc, stats, claude, alert, media, calendar, network, shortcuts, github}`; unavailable sections are `null` |
+| GET | `/api/status` `/api/stats` `/api/claude` `/api/alerts` `/api/calendar` `/api/media` `/api/network` `/api/shortcuts` `/api/github` | none | `{available, data}` |
+| POST | `/api/media` | `{"cmd":"toggle"|"next"|"prev"}` | `{ok}` |
+| POST | `/api/shortcuts/run` | `{"id":0}` | `{ok}` |
+| POST | `/api/alerts/action` | `{"id":"..","action":"dismiss"}` | `{ok}` |
+| POST | `/api/speedtest` | `{}` | `{ok}` |
+| POST | `/api/phone/status` | `{battery, charging, network, model}` | `{ok, status}` (shown on the PC) |
+| GET | `/api/inbox` | none | `{items:[{id,kind,text}]}` messages from the PC |
+| POST | `/api/inbox/ack` | `{"ids":[..]}` | `{ok}` |
+| POST | `/api/send` | `{"kind":"clipboard"|"link","text":".."}` | `{ok}` (links must be http/https) |
+| GET | `/api/files` | none | `{toPhone, received, maxBytes}` |
+| PUT | `/api/files/upload?name=..` | file bytes | `{ok, name, size}` into `Documents\Hubuddy\Received` |
+| GET | `/api/files/download?name=..` | none | file from `Documents\Hubuddy\ToPhone` |
 
-Errors are `{"error":"…"}` with 400, 401, 403, 404, 405, 408, 413 or 429. Limits: 16 KB headers, 16 KB body,
-10 s to send a request, 10 failed auth attempts per minute per client.
+The PC's own page (`http://127.0.0.1:8766/`) answers only to the PC itself (loopback address, loopback `Host`, and a
+local-action header for changes) and is never reachable from the network. Errors are `{"error":".."}` with 400, 401, 403,
+404, 405, 413, 429 or 501. Discovery: UDP port 41236, probe `hubuddy:discover:v1`, reply `hubuddy:here:v1:{json}`.
 
-## 6. Troubleshooting
+## 5. Troubleshooting
 
 | In the app | Fix |
 | --- | --- |
-| "Agent unreachable" (USB) | Agent running? Run `adb reverse tcp:8765 tcp:8765` again after replugging |
-| "Agent unreachable" (Wi-Fi) | Started with `-Lan`? Firewall allows Python on Private networks? Same Wi-Fi? |
-| "Only local addresses are allowed" | Use the PC's LAN IP, not a public address |
-| "Agent rejected the pairing token" | Pairing was revoked: start the agent with `-Pair` and pair again |
-| "pairing is closed" | Code expired, used, or 5 wrong tries: restart the agent with `-Pair` |
-| AI page: "Claude Code agent not connected" | No Claude Code data on that PC yet, or the agent is not paired |
+| "No PC found" | Same Wi-Fi/LAN (or USB tethering on)? Allow Hubuddy through the firewall for **private** networks (installer option, or the window's button). Guest Wi-Fi and some routers block device-to-device traffic: use a QR code or *Enter address*, or switch on USB tethering |
+| "Cannot reach the PC" | Is Hubuddy running there? Same network? The address is re-found automatically when it changes |
+| "This computer's identity does not match" | The PC was reinstalled or its identity folder was replaced. Remove it and pair again |
+| "The invitation or PIN is wrong or has expired" | Invitations and PINs last 2 minutes and work once. Start pairing again on the PC |
+| "Too many attempts" | Five wrong tries lock a phone for a minute (the PC also limits attempts overall). Wait and retry |
+| AI page: "Claude Code is not connected" | No Claude Code data on that PC yet, or it is not paired |
 | Limits and alerts missing | Run `python -m hubuddy_agent.claude_setup apply` |
-| What's playing is missing | Needs the `winrt` packages (installed by `requirements.txt` on Windows) and something playing |
+| What's playing is missing | Needs the `winrt` packages (in `requirements.txt` on Windows) and something playing |

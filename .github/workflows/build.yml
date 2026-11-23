@@ -121,3 +121,18 @@ jobs:
           (cd assets && sha256sum Hubuddy-${ver}.apk Hubuddy-${ver}.exe HubuddySetup-${ver}.exe > SHA256SUMS.txt)
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "Hubuddy ${ver}" --generate-notes \
             "assets/Hubuddy-${ver}.apk" "assets/Hubuddy-${ver}.exe" "assets/HubuddySetup-${ver}.exe" assets/SHA256SUMS.txt
+      - name: Also list the downloads in releases/ on the branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          git clone --quiet --depth 1 --branch feature/hubuddy-app "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" repo
+          cp "assets/Hubuddy-${ver}.apk" "assets/Hubuddy-${ver}.exe" "assets/HubuddySetup-${ver}.exe" repo/releases/
+          cd repo/releases
+          for f in "Hubuddy-${ver}.apk" "Hubuddy-${ver}.exe" "HubuddySetup-${ver}.exe"; do sha256sum "$f" > "$f.sha256"; done
+          cd ..
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add releases
+          git commit -m "Add Hubuddy ${ver} downloads built by CI [skip ci]" || exit 0
+          git push origin feature/hubuddy-app

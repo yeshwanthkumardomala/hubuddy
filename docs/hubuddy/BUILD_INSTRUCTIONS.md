@@ -59,15 +59,24 @@ robolectricRepoUrl=https://maven-central.storage-download.googleapis.com/maven2
 
 ## Install on the phone
 
-Turn on *Developer options → USB debugging* (tap *Software version* or *Build number* seven times under About
-phone), connect USB, accept the prompt, then:
+Copy `app-debug.apk` (or the release APK) to the phone, open it, and allow *install unknown apps* for the app you opened
+it from. No developer options or cable are needed. (If you prefer a cable, `adb install -r` still works, but nothing in
+Hubuddy requires it.)
 
-```powershell
-adb devices -l
-adb install -r app\build\outputs\apk\debug\app-debug.apk
-```
+## Windows program and installer
 
-## Laptop agent download
+Built by GitHub Actions on a real Windows runner (`.github/workflows/build.yml`): `pyinstaller agent/hubuddy.spec` makes
+`Hubuddy.exe`, Inno Setup (`installer/Hubuddy.iss`) makes `HubuddySetup.exe`, and the workflow runs the tests, a self-test
+of the portable and the installed program, a silent install/uninstall, and (for a `v*` tag) publishes a Release.
+Locally on Windows: `pip install -r agent/requirements.txt pyinstaller`, then `pyinstaller --noconfirm agent/hubuddy.spec`.
+`Hubuddy.exe --selftest` pairs a pretend phone with the program itself and prints a pass/fail list.
+
+## Interop test
+
+`tools/interop.sh` starts the real PC program and runs the app's real client code against it (QR and PIN pairing, API,
+messages, files). Needs Python with `agent/requirements.txt`, JDK 17 and the Android SDK.
+
+## Python-source download
 
 `python tools/package_agent.py` builds `releases/Hubuddy-Agent-<version>.zip` and its checksum from `agent/`
 (without tests, caches or your `config.toml`). Same sources give the same zip.

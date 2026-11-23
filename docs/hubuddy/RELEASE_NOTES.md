@@ -1,5 +1,36 @@
 # Release notes
 
+## 3.0.0 — Pair like a pro (2026-11-23)
+
+**Connecting, redesigned.** No Developer options, no `adb`, no typing IP addresses.
+
+* **Three ways in:** scan a QR code on the PC; or find the PC on the network and type a PIN after checking a compare
+  code; or, on the same Wi-Fi or LAN (also USB tethering), let the phone find known PCs by itself. A pasted invitation and a
+  typed address remain as fallbacks.
+* **Encrypted and pinned:** every PC makes its own private certificate authority; the phone trusts only that authority and the
+  PC's signed name. QR secrets and PINs last two minutes and work once; five wrong tries lock a phone out for a minute and a
+  PC-wide budget protects against guessing. The PC's own page is loopback-only with DNS-rebinding defences.
+* **Many phones, many PCs:** a PC accepts up to 32 phones (each forgettable alone); a phone keeps up to 8 PCs and finds them again
+  by their permanent id when addresses change.
+* **Two-way:** send text, links and the clipboard to the PC; the PC sends text and links to the phone; files both ways into
+  `Documents\Hubuddy`; the PC shows each phone's battery and network; an activity log and a notice when a new phone pairs.
+* **Windows program:** `Hubuddy.exe` (portable) and `HubuddySetup.exe` (installer with a private-network firewall rule and an
+  autostart option), built and self-tested on real Windows by CI. `Hubuddy.exe --selftest` checks pairing and the API against itself.
+* **App:** QR scanner using the framework camera and zxing core only (APK stays small), new Send & files screen, a clearer
+  Add-a-PC card, HTTPS-only network policy. The USB/adb setup is gone.
+
+**Breaking change:** phones and PCs must both be updated to 3.x; old 2.x pairings are not carried over.
+
+**Credit:** the pairing design follows the approach of the Tara project (MIT, Copyright (c) 2026 Ali Saad); see `NOTICE`.
+
+**Known limits**
+* Not tested on a physical phone: camera QR scanning on real cameras, USB tethering, Keystore on a device, firewalls on your network.
+* The Windows programs are unsigned (SmartScreen shows "unknown publisher"). The APK is signed with a debug key, so remove an
+  older Hubuddy build before installing one signed by another source.
+* Wake-on-LAN, touchpad and keyboard, volume/brightness/power, screenshots, timers and world clocks, a rebuilt Settings main
+  page and Hindi/Telugu are planned for 3.1 to 3.3, not in this release.
+* Discovery cannot cross routers or guest Wi-Fi isolation; use a QR code or USB tethering there.
+
 ## 2.0.0 — Hubuddy (2026-11-23)
 
 The first public release of Hubuddy as its own product.

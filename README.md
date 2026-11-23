@@ -3,29 +3,44 @@
 # Hubuddy
 
 **A dashboard and dock display on your phone for all your PCs and laptops.**
-See live stats for up to 8 machines on one screen, watch Claude Code, control media and shortcuts, and let the
-phone turn into a landscape clock-and-status display when you leave it alone.
+See live stats for up to 8 machines on one screen, watch Claude Code, control media and shortcuts, send text, links
+and files both ways, and let the phone turn into a landscape clock-and-status display when you leave it alone.
 
 [![Android 5.0+](https://img.shields.io/badge/Android-5.0%2B-3DDC84?logo=android&logoColor=white)](#compatibility)
+[![Windows 10/11](https://img.shields.io/badge/PC-Windows%2010%2F11-0078D4?logo=windows&logoColor=white)](#install-on-the-pc)
 [![Kotlin](https://img.shields.io/badge/app-Kotlin-7F52FF?logo=kotlin&logoColor=white)](android/hubuddy)
-[![Python agent](https://img.shields.io/badge/agent-Python%203.11%2B-3776AB?logo=python&logoColor=white)](agent)
-[![Tests](https://img.shields.io/badge/tests-173%20app%20%2B%2048%20agent%20passing-2EC4B6)](docs/hubuddy/TEST_REPORT.md)
-[![APK size](https://img.shields.io/badge/APK-~1%20MB-8A5A3B)](releases)
+[![Python](https://img.shields.io/badge/PC%20program-Python%203.11%2B-3776AB?logo=python&logoColor=white)](agent)
+[![Build](https://github.com/yeshwanthkumardomala/hubuddy/actions/workflows/build.yml/badge.svg?branch=feature%2Fhubuddy-app)](https://github.com/yeshwanthkumardomala/hubuddy/actions/workflows/build.yml)
 
-### Downloads (v2.0.0)
+### Downloads (v3.0.0)
 
-| 📱 Phone app | 💻 Laptop / PC agent |
-| --- | --- |
-| [**⬇ Hubuddy-2.0.0.apk**](https://github.com/yeshwanthkumardomala/hubuddy/raw/feature/hubuddy-app/releases/Hubuddy-2.0.0.apk) | [**⬇ Hubuddy-Agent-2.0.0.zip**](https://github.com/yeshwanthkumardomala/hubuddy/raw/feature/hubuddy-app/releases/Hubuddy-Agent-2.0.0.zip) |
-| Android 5.0+ · about 1 MB | Windows + Python 3.11+ · about 40 KB, double-click to start |
+| 📱 Phone app | 💻 PC / laptop program | 💻 PC installer |
+| --- | --- | --- |
+| [**Hubuddy-3.0.0.apk**](releases/Hubuddy-3.0.0.apk) | [**Hubuddy-3.0.0.exe**](releases/Hubuddy-3.0.0.exe) | [**HubuddySetup-3.0.0.exe**](releases/HubuddySetup-3.0.0.exe) |
+| Android 5.0+ · about 170 KB | Windows 10/11 · portable, no install | adds Start menu, firewall rule, autostart option |
 
-<sub>You need both: the app on the phone and the agent on each PC. Checksums and install steps: [all releases](releases)</sub>
+<sub>You need the app on the phone and the program on each PC. Checksums, install steps and the
+[Releases page](https://github.com/yeshwanthkumardomala/hubuddy/releases): [all downloads](releases)</sub>
 
 <img src="docs/hubuddy/screenshots/phone/31-landscape-all-pcs-dark.png" width="92%" alt="Landscape: all PCs at a glance">
 
 </div>
 
 ---
+
+## Connect in a minute: no developer options, no cable, no typing IPs
+
+Phone and PC just need to be on the **same Wi-Fi or LAN**, or connected by **USB tethering** (the ordinary switch in
+the phone's Hotspot & tethering settings, which makes the cable behave like a small network).
+
+1. **On the PC:** open `Hubuddy.exe`, then click **Pair a phone** (a QR code appears) or **Pair with a PIN**.
+2. **On the phone:** Settings → **Add a PC or laptop** → **Scan QR code**. No camera? Choose **Find PCs on this network**,
+   tap your PC, check that the *compare code* matches the one on the PC, and type the PIN.
+3. Done. Add more PCs the same way (up to 8), and pair more phones to the same PC (up to 32). If a PC's address changes,
+   the phone finds it again by itself.
+
+Everything between phone and PC is encrypted and pinned to *that* PC's own identity, so a stranger on the Wi-Fi cannot
+pose as your computer. [How pairing works](docs/hubuddy/ARCHITECTURE.md#pairing-and-transport-how-a-phone-comes-to-trust-a-pc)
 
 ## Screenshots
 
@@ -78,6 +93,9 @@ phone turn into a landscape clock-and-status display when you leave it alone.
 | | |
 | --- | --- |
 | **Up to 8 PCs and laptops** | The **All PCs** overview shows each machine's CPU, RAM, GPU or disk, temperature, network speed and Claude state at once. Each reconnects on its own, so an offline machine never slows the rest |
+| **Many phones too** | Pair several phones with one PC; each has its own key and can be forgotten alone |
+| **Three ways in** | QR code, PIN with compare code, or the same Wi-Fi/LAN (including USB tethering): discovery finds the PC for you |
+| **Two-way** | Send text, links and your clipboard to the PC; the PC sends text and links to the phone; files go both ways (picked with Android's own file pickers); the PC shows each phone's battery and network |
 | **PC monitor** | CPU, RAM, disk, NVIDIA GPU load, temperature and VRAM, network throughput, internet health with latency, loss and a speed test |
 | **Claude Code** | Running, idle or *waiting for permission*; 5-hour and weekly limits with reset times; tokens, per-model use and a 7-day chart |
 | **Controls** | Media play, pause and skip; your own PC shortcut buttons (confirmed before they run); phone shortcuts for links and apps |
@@ -85,68 +103,64 @@ phone turn into a landscape clock-and-status display when you leave it alone.
 | **Dock mode** | After 5 idle minutes (also on battery, stopping at 15%) a full-screen landscape display shows the clock, then each page with data in turn, jumps to Claude alerts, dims at night and guards against burn-in |
 | **Looks** | Auto, Dark, Black and Light themes; a side rail and 2 to 4 card columns in landscape; a bottom bar in portrait |
 | **Offline first** | Opens with no PC and no internet; shows the last readings with their age; never shows invented numbers |
-| **Secure by design** | PIN lock with a forced first-login change, lockout and session timeout, Keystore-encrypted secrets, a pairing code and a separate token for every phone, agents reachable on your local network only |
-| **Tiny and fast** | Native Kotlin with no AndroidX, Material or OkHttp; about 1 MB; no background service; polling stops when the app is not visible |
+| **Secure by design** | PIN lock with a forced first-login change, lockout and session timeout, Keystore-encrypted secrets, per-PC pinned certificates, one-time pairing secrets, per-phone tokens, private networks only |
+| **Tiny and fast** | Native Kotlin with no AndroidX, Material or OkHttp; no background service; polling stops when the app is not visible |
+
+Planned next (not in 3.0.0): touchpad and keyboard, volume/brightness/power, app launcher, Wake-on-LAN, screenshots,
+timers and world clocks, a rebuilt Settings main page, and Hindi and Telugu. See [release notes](docs/hubuddy/RELEASE_NOTES.md).
 
 ## How it works
 
 ```
- PC 1 (Windows)      PC 2 (laptop)     ...up to 8              Phone (Android 5.0+)
- ┌───────────────┐   ┌───────────────┐                        ┌─────────────────────────────┐
- │ Hubuddy agent │   │ Hubuddy agent │   USB (one PC)         │ Hubuddy app                 │
- │   :8765       │   │   :8765       │◄─ or Wi-Fi (any) ─────►│   Home · Monitor · AI ·     │
- │ collectors    │   │ collectors    │   LAN only             │   Controls · Settings       │
- └───────────────┘   └───────────────┘                        │   All PCs · Dock mode       │
+ PC 1 (Windows)      PC 2 (laptop)     ...up to 8              Phone(s) (Android 5.0+)
+ ┌───────────────┐   ┌───────────────┐   same Wi-Fi / LAN     ┌─────────────────────────────┐
+ │ Hubuddy       │   │ Hubuddy       │◄─ or USB tethering ───►│ Hubuddy app                 │
+ │  HTTPS :8765  │   │  HTTPS :8765  │   (private only)       │   Home · Monitor · AI ·     │
+ │  UDP 41236    │   │  UDP 41236    │                        │   Controls · Settings       │
+ └───────────────┘   └───────────────┘                        │   All PCs · Dock · Send     │
                                                               └─────────────────────────────┘
 ```
 
-A small **agent** runs on each computer and serves its readings; the **app** pairs with each agent separately. The
-phone never runs commands itself: it asks an agent for a fixed action (media control, a shortcut number, dismiss
-an alert), and that PC decides what it means. Details in the [architecture guide](docs/hubuddy/ARCHITECTURE.md).
+A small program runs on each computer and serves its readings; the app pairs with each one separately. The phone never
+runs commands itself: it asks for a fixed action (media control, a shortcut number, dismiss an alert, send something) and
+that PC decides what it means. Details in the [architecture guide](docs/hubuddy/ARCHITECTURE.md).
 
-## Quick start
+## Install on the PC
 
-**1. Download both** from the table above (or from [releases](releases)). Install the app: open the APK on the phone
-and allow *install unknown apps*, or run `adb install -r Hubuddy-2.0.0.apk`.
+* **Installer (recommended):** run `HubuddySetup-3.0.0.exe`. It adds a Start menu entry, can allow phones through the
+  Windows Firewall for **private** networks only, and can start Hubuddy when you sign in.
+* **Portable:** run `Hubuddy-3.0.0.exe` anywhere. Click *Allow through Windows Firewall* in its window once.
+* **From source:** Python 3.11+, `pip install -r agent/requirements.txt`, `python -m hubuddy_agent.launcher`.
 
-**2. First login.** Use the temporary login number and PIN you built the app with (see
-[build instructions](docs/hubuddy/BUILD_INSTRUCTIONS.md)). The app makes you choose your own PIN straight away.
+The programs are not code-signed, so Windows SmartScreen may say "unknown publisher": choose *More info → Run anyway*.
+Verify a download with the `.sha256` files. Optional calendar links, shortcut buttons and Claude Code limits are set up
+in [PC setup and API](docs/hubuddy/API_SETUP.md).
 
-**3. Start the agent on the PC.** Install Python 3.11+, unzip `Hubuddy-Agent-2.0.0.zip` and double-click
-`start-agent.bat` (or, from a clone of this repository, run it in PowerShell):
+## Install on the phone
 
-```powershell
-cd agent
-.\start-agent.ps1            # USB: runs adb reverse for you
-.\start-agent.ps1 -Lan       # or Wi-Fi, same network only
-```
-
-**4. Pair.** The agent prints a 6-digit code. In the app: *Settings → PCs and laptops* → *Test connection* →
-enter the code → *Pair*. **More computers?** Start an agent on each one with `-Lan`, tap *+ Add PC*, enter its IP
-and pair it the same way (up to 8). Then open *Monitor → All PCs*.
-
-**5. Put the phone on a stand and leave it.** After 5 idle minutes dock mode starts and shows the time first.
-
-Optional: add calendar links and shortcut buttons in `agent/config.toml`, and run
-`python -m hubuddy_agent.claude_setup apply` for Claude Code limits and alerts. Full guide:
-[agent setup and API](docs/hubuddy/API_SETUP.md).
+Open `Hubuddy-3.0.0.apk` on the phone and allow *install unknown apps*. First login uses the temporary login number and
+PIN of your own build (see [build instructions](docs/hubuddy/BUILD_INSTRUCTIONS.md)); the app makes you choose your own PIN
+straight away.
 
 ## Compatibility
 
 | Phone | Status |
 | --- | --- |
-| Android 5.0 and newer, any brand | Supported. Tested in simulation on Android 5.0, 7.0, 8.0, 9, 11 and 14 |
-| Android 5.0 to 7.0 | Weather and GitHub cards may show "unavailable" on old certificate stores; PC data is unaffected |
-| iPhone and other devices | No app; use the web dashboard the agent serves at `http://<PC>:8765` |
+| Android 5.0 and newer, any brand | Supported. Tested in simulation on Android 5.0, 5.1, 7.0, 8.0, 9, 11 and 14 |
+| Android 5.0 to 7.0 | Weather and GitHub cards may show "unavailable" on old certificate stores; PC data is unaffected (it uses its own pinned certificate) |
+| iPhone and other devices | No app |
 
-> **Status:** automated tests pass, but **testing on a physical phone is still pending**, and the Windows
-> PowerShell scripts and Windows-only agent parts have not been run on Windows. See the [test report](docs/hubuddy/TEST_REPORT.md).
+> **Status:** the automated tests pass (see the [test report](docs/hubuddy/TEST_REPORT.md)) and the Windows program is
+> built and self-tested on a real Windows machine in CI, but **testing on a physical phone is still pending**: camera QR
+> scanning, USB tethering, the Keystore on a device and firewall behaviour on your own network have not been tried on
+> real hardware.
 
 ## Security notes
 
-- Plain HTTP is **not encrypted**. USB mode keeps traffic on the cable; on Wi-Fi use a network you trust.
-- The agent listens on `127.0.0.1` by default; `--lan` accepts only private-network clients, and the app refuses to send its token to a public address.
-- Do not forward the agent's port on your router.
+- Everything between phone and PC is HTTPS with a certificate authority private to each PC, pinned by the phone.
+- QR is the strongest way to pair. A PIN is safe when you compare the code on both screens first.
+- Only private-network clients are served and the app refuses to talk to public addresses. Do not forward the port on your router.
+- Remote actions are fixed verbs with validated arguments; files are confined to two folders under `Documents\Hubuddy`.
 - The first-login credentials are temporary, are not stored in this repository, and are baked into your own build.
 
 ## Build from source
@@ -157,23 +171,27 @@ cd android\hubuddy
 .\build.ps1 -Release -Lint   # optimised release APK and Android Lint
 ```
 
-Needs JDK 17+ and the Android SDK (Platform 34). See [build instructions](docs/hubuddy/BUILD_INSTRUCTIONS.md).
+Needs JDK 17+ and the Android SDK (Platform 34). The Windows program is built by [CI](.github/workflows/build.yml) with
+PyInstaller and Inno Setup. See [build instructions](docs/hubuddy/BUILD_INSTRUCTIONS.md).
 
 ## Repository layout
 
 ```
 android/hubuddy/   Android app (Kotlin) and build.ps1
-agent/             PC agent (Python), start-agent.ps1, config.example.toml, web dashboard
+agent/             PC program (Python): server, pairing, launcher window, collectors, tests
+installer/         Inno Setup recipe for HubuddySetup.exe
+.github/workflows/ CI: tests, Windows build, installer, release
 docs/hubuddy/      Architecture, build, setup, test report, release notes, screenshots
-releases/          Downloads: phone APK and laptop agent zip, with checksums
-tools/             package_agent.py builds the laptop agent zip
+releases/          Downloads: APK, Hubuddy.exe, HubuddySetup.exe, checksums
+tools/             interop test, test-certificate generator, source-zip packager
 ```
 
 ## Documentation
 
 [Architecture](docs/hubuddy/ARCHITECTURE.md) · [Build instructions](docs/hubuddy/BUILD_INSTRUCTIONS.md) ·
-[Agent setup and API](docs/hubuddy/API_SETUP.md) · [Test report](docs/hubuddy/TEST_REPORT.md) ·
+[PC setup and API](docs/hubuddy/API_SETUP.md) · [Test report](docs/hubuddy/TEST_REPORT.md) ·
 [Release notes](docs/hubuddy/RELEASE_NOTES.md) · [Screenshots](docs/hubuddy/SCREENSHOTS.md) ·
-[Libraries](docs/hubuddy/LIBRARIES.md)
+[Libraries](docs/hubuddy/LIBRARIES.md) · [Notice](NOTICE)
 
-Weather and place search by [Open-Meteo](https://open-meteo.com).
+Weather and place search by [Open-Meteo](https://open-meteo.com). The pairing design follows the approach of the Tara
+project (MIT), credited in [NOTICE](NOTICE).

@@ -32,7 +32,6 @@ Source: "{#SourceExe}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\Hubuddy"; Filename: "{app}\Hubuddy.exe"
-Name: "{autodesktop}\Hubuddy"; Filename: "{app}\Hubuddy.exe"; Tasks: startup; Check: false
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Hubuddy"; ValueData: """{app}\Hubuddy.exe"" --minimized"; Flags: uninsdeletevalue; Tasks: startup

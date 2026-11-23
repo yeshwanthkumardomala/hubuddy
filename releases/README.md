@@ -1,33 +1,25 @@
 # Releases
 
-Everything you need to install Hubuddy. You need **both**: the app on your phone, and the agent on each PC or laptop.
+Everything you need to install Hubuddy: the app on your phone and the program on each PC or laptop.
+The same files are on the [GitHub Releases page](https://github.com/yeshwanthkumardomala/hubuddy/releases).
 
-| Download | What it is | Where it runs | Size | Checksum |
-| --- | --- | --- | --- | --- |
-| [**Hubuddy-2.0.0.apk**](Hubuddy-2.0.0.apk) | The phone app | Android 5.0 or newer | about 1 MB | [sha256](Hubuddy-2.0.0.apk.sha256) |
-| [**Hubuddy-Agent-2.0.0.zip**](Hubuddy-Agent-2.0.0.zip) | The laptop / PC agent | Windows 10 or 11 with Python 3.11+ (also runs on other systems, with fewer features) | about 40 KB | [sha256](Hubuddy-Agent-2.0.0.zip.sha256) |
+| Download | What it is | Runs on |
+| --- | --- | --- |
+| **Hubuddy-3.0.0.apk** | the phone app | Android 5.0 or newer |
+| **HubuddySetup-3.0.0.exe** | installer for the PC program (Start menu, optional firewall rule and autostart) | Windows 10 or 11 |
+| **Hubuddy-3.0.0.exe** | the same program, portable (no install) | Windows 10 or 11 |
 
-Verify a download: `sha256sum -c Hubuddy-2.0.0.apk.sha256` (Windows: `certutil -hashfile <file> SHA256` and compare).
+Each file has a `.sha256` next to it. Verify: `certutil -hashfile <file> SHA256` (Windows) or `sha256sum -c <file>.sha256`.
 
-## Install the phone app
+Older: `Hubuddy-2.0.0.apk` and `Hubuddy-Agent-2.0.0.zip` are the previous version (USB/adb pairing); they do not work with 3.x.
 
-Open the APK on the phone and allow "install unknown apps" for your browser or file manager, or run
-`adb install -r Hubuddy-2.0.0.apk`. The debug-signed build is for sideloading. The app has its own identity
-(`com.sidya.hubuddy`), so it installs next to any earlier test build.
+## Install
 
-## Install the laptop agent
+1. **PC:** run `HubuddySetup-3.0.0.exe` (or `Hubuddy-3.0.0.exe`). Windows may say "unknown publisher" because the program is
+   not code-signed: *More info → Run anyway*.
+2. **Phone:** open the APK and allow *install unknown apps*.
+3. **Pair:** on the PC click *Pair a phone*; in the app choose Settings → Add a PC or laptop → *Scan QR code*. No camera: use
+   *Pair with a PIN* on the PC and *Find PCs on this network* in the app. Same Wi-Fi/LAN or USB tethering; no developer options.
 
-1. Install **Python 3.11 or newer** from python.org (tick "Add python.exe to PATH") if you do not have it.
-2. Unzip `Hubuddy-Agent-2.0.0.zip` anywhere (for example `C:\Hubuddy`).
-3. Double-click **`start-agent.bat`**. The first start installs what it needs (about a minute), then prints a
-   6-digit pairing code.
-4. In the app: Settings → PCs and laptops → enter the code → Pair.
-
-Repeat on every computer you want to see (up to 8). For Wi-Fi instead of USB, start it with `start-agent.bat -Lan`.
-The agent is a Python program, not a single `.exe`: a standalone installer has to be built on Windows. Full guide:
-[agent setup](../docs/hubuddy/API_SETUP.md).
-
-## Rebuilding the downloads
-
-* Phone app: `android/hubuddy/build.ps1` (see the [build instructions](../docs/hubuddy/BUILD_INSTRUCTIONS.md)).
-* Laptop agent zip: `python tools/package_agent.py` (identical output every time for the same sources).
+The `.exe` files and the APK are built by [CI](../.github/workflows/build.yml) on a real Windows/Linux runner, tests passing, and
+attached to each release. Build them yourself: see the [build instructions](../docs/hubuddy/BUILD_INSTRUCTIONS.md).

@@ -1,22 +1,24 @@
-# Hubuddy agent
+# Hubuddy PC program
 
-Runs on a PC or laptop and serves its live readings to the Hubuddy Android app over an authenticated local HTTP
-API (port 8765): CPU, memory, disk, GPU (NVIDIA), network throughput, internet health, Claude Code usage and alerts,
-what is playing, calendar events, GitHub contributions and your shortcut buttons.
+Runs on a PC or laptop and serves its live readings to the Hubuddy Android app over an encrypted, pinned HTTPS API:
+CPU, memory, disk, GPU (NVIDIA), network throughput, internet health, Claude Code usage and alerts, what is playing,
+calendar events, GitHub contributions and your shortcut buttons. It also exchanges text, links, the clipboard and files
+with paired phones and shows each phone's battery and network.
 
-* Python 3.11+. `psutil` for system stats; everything else is optional (see `requirements.txt`).
-* Listens on `127.0.0.1` by default (USB, via `adb reverse`). `--lan` makes it reachable on your local network,
-  accepting only private-network clients. Plain HTTP is not encrypted.
-* A one-time pairing code gives each phone its own token (stored only as a hash on the PC).
-* The phone sends fixed actions (media control, a shortcut number, dismiss an alert). What a shortcut does is
-  written in `config.toml` on the PC; commands are started without a shell.
+* Python 3.11+. Most people use `Hubuddy.exe` / `HubuddySetup.exe` from the Releases page instead.
+* Phones pair with a **QR code** or a **PIN** (with a compare code) and find the PC by themselves on the same Wi-Fi/LAN
+  or USB tethering. No developer options, no IP typing. Several phones and several PCs work together.
+* A private certificate authority per installation is pinned by each phone; tokens are stored only as hashes.
+* The phone sends fixed actions (media control, a shortcut number, dismiss an alert, send text/link/file). What a shortcut
+  does is written in `config.toml` on the PC; commands are started without a shell.
 
 ```powershell
-.\start-agent.ps1            # USB mode
-.\start-agent.ps1 -Lan       # Wi-Fi mode
+.\start-agent.ps1 -Window    # the Hubuddy window
+.\start-agent.ps1 -Invite    # print a pairing QR code here
+python -m hubuddy_agent --selftest
 ```
 
-Claude Code limits and "waiting for permission" alerts: `python -m hubuddy_agent.claude_setup show`
-(preview), then `apply` (adds a hook and status line to `~/.claude/settings.json`, with a backup; `remove` undoes it).
+Claude Code limits and "waiting for permission" alerts: `python -m hubuddy_agent.claude_setup show` (preview), then
+`apply` (adds a hook and status line to `~/.claude/settings.json`, with a backup; `remove` undoes it).
 
-Tests: `python -m unittest discover -s tests`. Setup and API reference: [docs](../docs/hubuddy/API_SETUP.md).
+Tests: `PYTHONPATH=tests:. python -m unittest discover -s tests`. Setup and API reference: [docs](../docs/hubuddy/API_SETUP.md).

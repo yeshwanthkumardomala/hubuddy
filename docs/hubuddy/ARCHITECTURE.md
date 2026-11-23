@@ -3,18 +3,19 @@
 Hubuddy turns an Android phone into a dashboard and ambient display for your Windows PCs and laptops.
 
 ```
- PC 1 (Windows)      PC 2 (laptop)     ...up to 8              Phone (Android 5.0+)
- ┌───────────────┐   ┌───────────────┐                        ┌─────────────────────────────┐
- │ Hubuddy agent │   │ Hubuddy agent │   USB (one PC)         │ Hubuddy app                 │
- │   :8765       │◄──┤   :8765       │◄─ or Wi-Fi (any) ─────►│   Home · Monitor · AI ·     │
- │ collectors    │   │ collectors    │   LAN only             │   Controls · Settings       │
- └───────────────┘   └───────────────┘                        │   All PCs · Dock mode       │
-                                                              └─────────────────────────────┘
+ PC 1 (Windows)      PC 2 (laptop)     ...up to 8              Phone(s) (Android 5.0+)
+ ┌───────────────┐   ┌───────────────┐   same Wi-Fi / LAN     ┌─────────────────────────────┐
+ │ Hubuddy       │   │ Hubuddy       │◄─ or USB tethering ───►│ Hubuddy app                 │
+ │  HTTPS :8765  │   │  HTTPS :8765  │   (private only)       │   Home · Monitor · AI ·     │
+ │  UDP 41236    │   │  UDP 41236    │                        │   Controls · Settings       │
+ │  page :8766   │   │  page :8766   │                        │   All PCs · Dock · Send     │
+ └───────────────┘   └───────────────┘                        └─────────────────────────────┘
 ```
 
-* **Agent** (`agent/`, Python 3.11+): runs on each computer, collects readings with its own collectors, and
-  serves them over a small authenticated HTTP API. It is the only thing on the PC.
-* **App** (`android/hubuddy/`, Kotlin): talks to one or more agents, shows their data, and works from its last
+* **PC program** (`agent/`, Python 3.11+, shipped as `Hubuddy.exe`): runs on each computer, collects readings with its
+  own collectors, and serves them over a small authenticated HTTPS API. A window (tkinter) starts pairing, lists phones
+  and sets up the firewall and autostart.
+* **App** (`android/hubuddy/`, Kotlin): talks to one or more PCs, shows their data, and works from its last
   saved readings when a PC is off.
 
 ## Agent collectors
@@ -32,7 +33,7 @@ Hubuddy turns an Android phone into a dashboard and ambient display for your Win
 ## App
 
 * **No AndroidX, Material or OkHttp.** Framework widgets, `HttpURLConnection` and `org.json`. Debug APK about
-  1 MB, release about 120 KB. No native code. Works on Android 5.0+ (minSdk 21): PBKDF2-SHA256 is built on
+  1.4 MB, release about 170 KB. No native code. Works on Android 5.0+ (minSdk 21): PBKDF2-SHA256 is built on
   HmacSHA256, Base64 comes from `android.util`, and the network type uses the older API before Android 6. On
   Android 5.x, which has no AES keys in the Keystore, secrets stay in memory only and are never written in clear text.
 * **Screens:** Home, Monitor (with **All PCs**), AI, Controls, Settings, plus Calendar, Weather, Network and
@@ -45,19 +46,36 @@ Hubuddy turns an Android phone into a dashboard and ambient display for your Win
 * **Themes:** Auto, Dark, Black and Light, with a test for readable contrast in every look.
 * **Never fakes data:** a value an agent did not send shows "unavailable". Offline, the last saved readings are shown with their age.
 
-## Security
+## Pairing and transport (how a phone comes to trust a PC)
+
+1. **Identity.** On first start each PC creates a private certificate authority (ECDSA P-256, 10 years) and a server
+   certificate (90 days, renewed with the same authority) carrying the signed name `host-<id>.hubuddy.invalid`. A marker file
+   detects a replaced identity and refuses to silently create a new one.
+2. **QR invitation.** The QR holds the authority, addresses, port and a random one-time secret that dies after two minutes
+   (the PC keeps only its SHA-256). Scanning it pins that authority on the phone: no other authority, including the phone's
+   own list, is ever consulted for this PC, and the certificate must carry the PC's signed name.
+3. **PIN pairing.** A fresh 6-digit PIN (two minutes, single use) and a 12-character *compare code*, computed from the PC's
+   identity. The phone shows the code it received; the user checks they match before the PIN is sent, so a man-in-the-middle
+   on the network is caught. QR is stronger; PIN needs that visual check.
+4. **Token.** Pairing returns a 32-byte random token, stored as a SHA-256 on the PC and Keystore-encrypted on the phone.
+   Tokens last 180 days, there are at most 32 per PC, and each phone can be forgotten alone.
+5. **Defences.** Five wrong claims lock a client for a minute; a host-wide budget (30 failures per 10 minutes) pauses
+   pairing for everyone; the `Host` header must be a known name (DNS-rebinding); only private-network peers are served; the
+   PC's own page needs loopback, a loopback `Host` and a local-action header.
+6. **Finding a PC.** The phone broadcasts a UDP probe on every IPv4 link that is up, including USB tethering
+   (`rndis`/`usb`/`ncm`), falls back to probing the subnet, and re-finds a paired PC by host id when its address changes.
+
+## Security summary
 
 | Concern | Measure |
 | --- | --- |
-| App lock | Login number + PIN. PIN stored only as PBKDF2-HMAC-SHA256 (60,000 iterations, random salt), compared in constant time |
-| First login | Temporary credentials are baked into your own build (not stored in the repository); the app forces a new PIN on first login and dock/dashboard stay locked until then |
-| Brute force | 5 failures lock for 30 s, doubling up to 15 min, persisted across restarts |
-| Session | Random id in the encrypted store, inactivity timeout (default 15 min) |
-| Secrets at rest | AES-256-GCM with a non-exportable Android Keystore key; memory-only where the Keystore cannot do it; `allowBackup=false` |
-| Pairing | Single-use, expiring 6-digit code (dies after 5 wrong guesses) gives each phone its own 256-bit token; the PC stores only its SHA-256 |
-| Exposure | Agent binds `127.0.0.1` by default; `--lan` accepts private-network clients only; the app refuses to send its token to a public address; failed auth is rate-limited |
-| Commands | Fixed verbs with validated arguments. The phone never sends a command line |
-| Transport | Plain HTTP is **not encrypted**. USB keeps traffic on the cable; on Wi-Fi use a network you trust |
+| App lock | Login number + PIN (PBKDF2-HMAC-SHA256, 60,000 iterations, constant-time compare); forced PIN change on first login; lockout; session timeout |
+| Secrets on the phone | AES-256-GCM with a non-exportable Android Keystore key; memory-only where unavailable (Android 5.x); `allowBackup=false` |
+| Transport | HTTPS only, pinned per-PC authority, no cleartext anywhere in the app |
+| Exposure | Private-network clients only; the app refuses to send anything to a public address; never forward the port on a router |
+| Commands | Fixed verbs with validated arguments; shortcut programs start without a shell; files are confined to two folders with sanitised names, size limits and no symlinks |
+| Local page | Loopback only, with `Host`, origin and local-action checks and a strict Content-Security-Policy |
+| Limits not covered | An attacker already on your PC, or a PC whose identity folder is stolen, can impersonate that PC; the program is unsigned (Windows SmartScreen) |
 
 ## Repository layout
 
@@ -65,6 +83,8 @@ Hubuddy turns an Android phone into a dashboard and ambient display for your Win
 android/hubuddy/   Android app and build.ps1
 agent/             PC agent, start-agent.ps1, config.example.toml, tests, optional web dashboard
 docs/hubuddy/      this documentation and screenshots
-releases/          downloads: phone APK and laptop agent zip, with checksums
-tools/             package_agent.py builds the laptop agent zip
+installer/         Inno Setup recipe for HubuddySetup.exe
+.github/workflows/ CI: tests, Windows build, installer, release
+releases/          downloads: APK, Hubuddy.exe, HubuddySetup.exe, checksums
+tools/             interop.sh, make_test_pki.py, package_agent.py
 ```

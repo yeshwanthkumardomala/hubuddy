@@ -16,22 +16,22 @@ AGENT = ROOT / "agent"
 OUT = ROOT / "releases"
 STAMP = (2026, 1, 1, 0, 0, 0)
 
-READ_ME = """Hubuddy agent {version}
-======================
+READ_ME = """Hubuddy PC program {version} (Python source)
+==============================================
 
-Runs on this PC and serves its live readings (CPU, memory, disk, GPU, Claude Code, media, calendar, network,
-shortcuts) to the Hubuddy app on your phone.
+Most people should use Hubuddy.exe or HubuddySetup.exe from the Releases page. This zip runs the same program from
+Python source.
 
 1. Install Python 3.11 or newer from python.org ("Add python.exe to PATH" ticked), if you do not have it.
 2. Double-click  start-agent.bat  (first start installs what it needs, which takes a minute).
-3. It prints a 6-digit pairing code. In the Hubuddy app: Settings > PCs and laptops > pair, and enter the code.
+3. Open http://127.0.0.1:8766/ on this PC and choose "Pair a phone". In the Hubuddy app: Settings > Add a PC or
+   laptop > Scan QR code. No camera? Use "Pair with a PIN" and "Find PCs on this network" in the app.
 
-USB cable: also install the Android platform-tools (adb) and turn on USB debugging on the phone.
-Wi-Fi:     start-agent.bat -Lan   (allow Python through Windows Firewall for Private networks only)
+Same Wi-Fi or LAN is needed (or switch on USB tethering on the phone). No developer options. Allow Python through
+Windows Firewall for Private networks only.
 
 Optional: copy config.example.toml to config.toml to add calendar links and shortcut buttons.
-Claude Code limits and alerts: see docs\\SETUP.md ("Optional: Claude Code limits and alerts").
-Plain HTTP on Wi-Fi is not encrypted. Never forward port 8765 on your router.
+Claude Code limits and alerts: python -m hubuddy_agent.claude_setup show
 """
 
 

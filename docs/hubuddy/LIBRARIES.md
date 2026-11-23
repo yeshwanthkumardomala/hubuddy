@@ -15,3 +15,13 @@ JUnit (EPL 1.0) and Robolectric (MIT).
 | tzdata | Time zone data | Apache-2.0 |
 
 Weather and place search use the free [Open-Meteo](https://open-meteo.com) API (no key; attribution appreciated).
+
+## Added in 3.0.0
+
+| Library | Where | License | Why |
+| --- | --- | --- | --- |
+| ZXing core 3.5.3 | Android app (QR decoding only) | Apache 2.0 | reads the pairing QR code; the camera itself is the framework's |
+| cryptography | PC program | Apache 2.0 / BSD | the per-PC certificate authority and server certificate |
+| segno | PC program | BSD | draws the pairing QR code |
+| PyInstaller | build only | GPL with bootloader exception | builds `Hubuddy.exe` |
+| Inno Setup | build only | Inno Setup License | builds `HubuddySetup.exe` |
