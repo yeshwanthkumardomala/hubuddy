@@ -35,9 +35,7 @@ Regenerate: `gradlew testDebugUnitTest --tests "*Screenshots*" -Pscreenshots=<fo
 
 ## PC side
 
-The agent console is real output from running the agent. The web dashboard uses sample data.
+The page the PC program opens at `http://127.0.0.1:8766/`, running for real with two sample phones paired (this is the page behind “Pair a phone”). The QR code is a one-time example.
 
-![Agent console](screenshots/pc/01-agent-console.png)
-![Web pairing](screenshots/pc/02-web-pairing.png)
-![Web dashboard](screenshots/pc/03-web-dashboard-laptop.png)
-![Web dashboard on a phone](screenshots/pc/04-web-dashboard-phone-browser.png)
+![Pair a phone with a QR code](screenshots/pc/01-pair-qr.png)
+![Pair with a PIN and compare code](screenshots/pc/02-pair-pin.png)
