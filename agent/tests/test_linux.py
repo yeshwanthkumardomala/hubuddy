@@ -100,7 +100,9 @@ class Help(unittest.TestCase):
 
     def test_launcher_falls_back_without_a_window(self):
         from hubuddy_agent import launcher
-        with mock.patch.dict(sys.modules, {"tkinter": None}), mock.patch("hubuddy_agent.__main__.main", return_value=0) as cli:
+        # pretend to be Linux: on Windows the launcher starts the tray program (Edge window) and would wait for Quit
+        with mock.patch.object(sys, "platform", "linux"), mock.patch.dict(sys.modules, {"tkinter": None}), \
+                mock.patch("hubuddy_agent.__main__.main", return_value=0) as cli:
             self.assertEqual(launcher.main(["--minimized"]), 0)
         self.assertIn("--show-invite", cli.call_args[0][0])
 
