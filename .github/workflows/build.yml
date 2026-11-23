@@ -6,6 +6,14 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: Publish a GitHub Release (creates the tag) when the build passes
+        type: boolean
+        default: false
+      version:
+        description: Version for the release, e.g. 3.0.0
+        default: "3.0.0"
 
 permissions:
   contents: read
@@ -99,7 +107,7 @@ jobs:
 
   release:
     name: Publish release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release)
     needs: [windows, android]
     runs-on: ubuntu-latest
     permissions:
@@ -112,20 +120,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="${GITHUB_REF_NAME}"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then tag="$GITHUB_REF_NAME"; else tag="v${{ inputs.version }}"; fi
           ver="${tag#v}"
           mv assets/hubuddy-android/Hubuddy.apk "assets/Hubuddy-${ver}.apk"
           mv assets/hubuddy-android/Hubuddy.apk.sha256 "assets/Hubuddy-${ver}.apk.sha256" || true
           mv assets/hubuddy-windows/Hubuddy.exe "assets/Hubuddy-${ver}.exe"
           mv assets/hubuddy-windows/HubuddySetup.exe "assets/HubuddySetup-${ver}.exe"
           (cd assets && sha256sum Hubuddy-${ver}.apk Hubuddy-${ver}.exe HubuddySetup-${ver}.exe > SHA256SUMS.txt)
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "Hubuddy ${ver}" --generate-notes \
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Hubuddy ${ver}" --generate-notes \
             "assets/Hubuddy-${ver}.apk" "assets/Hubuddy-${ver}.exe" "assets/HubuddySetup-${ver}.exe" assets/SHA256SUMS.txt
       - name: Also list the downloads in releases/ on the branch
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ver="${GITHUB_REF_NAME#v}"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then ver="${GITHUB_REF_NAME#v}"; else ver="${{ inputs.version }}"; fi
           git clone --quiet --depth 1 --branch feature/hubuddy-app "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" repo
           cp "assets/Hubuddy-${ver}.apk" "assets/Hubuddy-${ver}.exe" "assets/HubuddySetup-${ver}.exe" repo/releases/
           cd repo/releases
