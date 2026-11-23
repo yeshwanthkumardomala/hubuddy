@@ -96,6 +96,15 @@ class InteropTest {
         assertTrue(ok.toString(), ok is PairOutcome.Paired)
         assertEquals(1, reg.list().size)
 
+        // --- remote control: refused until the PC's owner allows this phone, then it reaches the PC (this Linux PC has no input backend)
+        val denied = link.post("/api/volume", JSONObject().put("action", "up"), "pc1") as ApiResult.Err
+        assertEquals(403, denied.code)
+        val phones = localCall("GET", "/local/state").getJSONArray("phones")
+        val sid = (0 until phones.length()).map { phones.getJSONObject(it) }.first { it.getString("name") == "Interop phone 2" }.getString("id") // the phone the app is currently signed in as
+        localCall("POST", "/local/remote", JSONObject().put("id", sid).put("on", true))
+        assertEquals("allowed now, but unavailable on this OS", 501, (link.post("/api/volume", JSONObject().put("action", "up"), "pc1") as ApiResult.Err).code)
+        assertTrue(link.get("/api/remote", "pc1").toString().contains("true"))
+
         // --- forget on the PC signs the phone out
         localCall("POST", "/local/forget-all", JSONObject().put("confirm", "forget-all"))
         assertEquals(ErrKind.UNAUTHORIZED, (link.get("/api/snapshot", "pc1") as ApiResult.Err).kind)

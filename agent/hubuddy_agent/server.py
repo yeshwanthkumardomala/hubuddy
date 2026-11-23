@@ -19,6 +19,7 @@ from collections import defaultdict, deque
 
 from . import VERSION
 from .auth import bearer, local_request_ok, make_host_check
+from . import remote as rc
 from .files import FileError
 from .netinfo import interfaces, is_loopback, is_private_peer, mac_for, primary_address
 from .pairing import compare_code
@@ -93,6 +94,7 @@ class AgentServer:
                  web_dir: pathlib.Path | None = None, clock=time.monotonic):
         self.source, self.svc = source, services
         self.lan_host, self.port, self.local_port = lan_host, port, local_port
+        self._rc_rate: dict = {}
         self.web_dir = pathlib.Path(web_dir).resolve() if web_dir else None
         self.clock = clock
         self.host_ok = make_host_check(services.name, tls_name=services.tls.name)
@@ -300,6 +302,9 @@ class AgentServer:
             self._method(req, "POST")
             return await self._phone_sends(req, sid)
 
+        if p in ("/api/remote", "/api/input", "/api/volume", "/api/power", "/api/processes", "/api/processes/end"):
+            return await self._remote(req, p, sid)
+
         if p == "/api/files":
             self._method(req, "GET")
             return Response(200, {"toPhone": svc.files.to_phone_list(), "received": svc.files.received_list()[:50], "maxBytes": svc.files.max_bytes})
@@ -385,6 +390,65 @@ class AgentServer:
         svc.activity.record("phone_paired", phone=entry["name"], method=method, peer=req.peer)
         return Response(200, {"ok": True, "hostId": svc.host_id, "token": token})
 
+    async def _remote(self, req: Request, p: str, sid: str) -> Response:
+        """Mouse, keyboard, volume, power and task manager. Off for every phone until the PC's owner switches it on."""
+        svc, be = self.svc, self.svc.remote
+        if p == "/api/remote":
+            self._method(req, "GET")
+            return Response(200, {"allowed": bool(req.session.get("remote")), "battery": be.battery()})
+        if not req.session.get("remote"):
+            raise HttpError(403, "Remote control is off for this phone. Turn it on in Hubuddy on the PC.")
+        now = self.clock()
+        window = self._rc_rate.setdefault(sid, [])
+        window[:] = [t for t in window if now - t < 1.0]
+        if len(window) >= 20:
+            raise HttpError(429, "too many remote actions per second")
+        window.append(now)
+        name = self._phone_name(req)
+        try:
+            if p == "/api/input":
+                self._method(req, "POST")
+                events = rc.validate_events((await req.json(32768)).get("events"))
+                for e in events:
+                    t = e["t"]
+                    if t == "move": be.move(e["dx"], e["dy"])
+                    elif t == "click": be.click(e["button"], e["double"])
+                    elif t == "scroll": be.scroll(e["dy"])
+                    elif t == "key": be.key(e["key"], e["mods"])
+                    else: be.text(e["text"])
+                if any(e["t"] in ("key", "text") for e in events):
+                    svc.activity.record("remote_input", phone=name, events=len(events))
+                return ok(count=len(events))
+            if p == "/api/volume":
+                self._method(req, "POST")
+                action = (await req.json()).get("action")
+                if action not in rc.VOLUME:
+                    raise rc.BadRequest("action must be up, down or mute")
+                be.key({"up": "volup", "down": "voldown", "mute": "mute"}[action], [])
+                return ok()
+            if p == "/api/power":
+                self._method(req, "POST")
+                action = (await req.json()).get("action")
+                if action not in rc.POWER:
+                    raise rc.BadRequest("action must be sleep, restart, shutdown or abort")
+                be.power(action)
+                svc.activity.record("remote_power", phone=name, action=action)
+                return ok(action=action, delaySeconds=15 if action in ("restart", "shutdown") else 0)
+            if p == "/api/processes":
+                self._method(req, "GET")
+                return Response(200, {"items": be.processes()})
+            self._method(req, "POST")
+            pid = (await req.json()).get("pid")
+            if isinstance(pid, bool) or not isinstance(pid, int):
+                raise rc.BadRequest("pid must be a number")
+            ended = be.end(pid)
+            svc.activity.record("remote_end_task", phone=name, program=ended)
+            return ok()
+        except rc.BadRequest as e:
+            raise HttpError(400, str(e))
+        except rc.Unavailable as e:
+            raise HttpError(501, str(e) or "this PC cannot do that")
+
     async def _phone_sends(self, req: Request, sid: str) -> Response:
         body = await req.json()
         kind, text = body.get("kind"), body.get("text")
@@ -416,7 +480,7 @@ class AgentServer:
         out = []
         for e in self.svc.sessions.entries:
             sid = self.svc.sessions.session_id(e)
-            out.append({"id": sid, "name": e["name"], "created": e["created"], "last_seen": e.get("last_seen", 0), "status": self.svc.status.get(sid)})
+            out.append({"id": sid, "name": e["name"], "created": e["created"], "last_seen": e.get("last_seen", 0), "status": self.svc.status.get(sid), "remote": bool(e.get("remote"))})
         return out
 
     async def _route_local(self, req: Request) -> Response:
@@ -456,6 +520,15 @@ class AgentServer:
                 svc.status.forget(sid)
                 svc.activity.record("phone_forgotten", id=sid)
             return ok(removed=gone)
+        if p == "/local/remote" and m == "POST":
+            body = await req.json()
+            sid, on = body.get("id"), body.get("on")
+            if not isinstance(sid, str) or not isinstance(on, bool):
+                raise HttpError(400, "id and on (true or false) required")
+            changed = svc.sessions.set_remote(sid, on)
+            if changed:
+                svc.activity.record("remote_allowed" if on else "remote_blocked", id=sid)
+            return ok(changed=changed)
         if p == "/local/forget-all" and m == "POST":
             if (await req.json()).get("confirm") != "forget-all":
                 raise HttpError(400, "confirm forgetting all phones")

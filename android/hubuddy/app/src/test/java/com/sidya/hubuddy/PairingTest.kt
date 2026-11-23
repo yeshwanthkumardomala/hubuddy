@@ -269,3 +269,15 @@ class TwoWayTest {
         } finally { server.stop(); udp.close() }
     }
 }
+
+class WakeTest {
+    @Test fun magicPacketMatchesTheStandardLayout() {
+        val p = com.sidya.hubuddy.net.Wake.packet("AA:BB:CC:DD:EE:FF")!!
+        assertEquals(102, p.size)
+        assertTrue(p.take(6).all { it == 0xFF.toByte() })
+        assertEquals(listOf(0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF), p.slice(6..11).map { it.toInt() and 0xFF })
+        assertEquals(listOf(0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF), p.takeLast(6).map { it.toInt() and 0xFF })
+        listOf("", "AA:BB", "GG:BB:CC:DD:EE:FF", "AABBCCDDEEFF").forEach { assertNull(it, com.sidya.hubuddy.net.Wake.packet(it)) }
+        assertEquals(102, com.sidya.hubuddy.net.Wake.packet("aa-bb-cc-dd-ee-ff")!!.size)
+    }
+}

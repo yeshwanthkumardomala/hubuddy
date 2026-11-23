@@ -12,11 +12,11 @@ and files both ways, and let the phone turn into a landscape clock-and-status di
 [![Python](https://img.shields.io/badge/PC%20program-Python%203.11%2B-3776AB?logo=python&logoColor=white)](agent)
 [![Build](https://github.com/yeshwanthkumardomala/hubuddy/actions/workflows/build.yml/badge.svg?branch=feature%2Fhubuddy-app)](https://github.com/yeshwanthkumardomala/hubuddy/actions/workflows/build.yml)
 
-### Downloads (v3.0.0)
+### Downloads (v3.1.0)
 
 | 📱 Phone app | 💻 PC / laptop program | 💻 PC installer |
 | --- | --- | --- |
-| [**Hubuddy-3.0.0.apk**](releases/Hubuddy-3.0.0.apk) | [**Hubuddy-3.0.0.exe**](releases/Hubuddy-3.0.0.exe) | [**HubuddySetup-3.0.0.exe**](releases/HubuddySetup-3.0.0.exe) |
+| [**Hubuddy-3.1.0.apk**](releases/Hubuddy-3.1.0.apk) | [**Hubuddy-3.1.0.exe**](releases/Hubuddy-3.1.0.exe) | [**HubuddySetup-3.1.0.exe**](releases/HubuddySetup-3.1.0.exe) |
 | Android 5.0+ · about 170 KB | Windows 10/11 · portable, no install | adds Start menu, firewall rule, autostart option |
 
 <sub>You need the app on the phone and the program on each PC. Checksums, install steps and the
@@ -98,6 +98,7 @@ pose as your computer. [How pairing works](docs/hubuddy/ARCHITECTURE.md#pairing-
 | **Two-way** | Send text, links and your clipboard to the PC; the PC sends text and links to the phone; files go both ways (picked with Android's own file pickers); the PC shows each phone's battery and network |
 | **PC monitor** | CPU, RAM, disk, NVIDIA GPU load, temperature and VRAM, network throughput, internet health with latency, loss and a speed test |
 | **Claude Code** | Running, idle or *waiting for permission*; 5-hour and weekly limits with reset times; tokens, per-model use and a 7-day chart |
+| **Remote control** | Touchpad, keyboard, volume and power from the phone, **off until you allow it per phone on the PC**; Wake a sleeping PC (Wake-on-LAN) |
 | **Controls** | Media play, pause and skip; your own PC shortcut buttons (confirmed before they run); phone shortcuts for links and apps |
 | **Calendar, weather, GitHub** | Upcoming events from any ICS link; Open-Meteo forecast for any city; repository stats and a contribution heatmap |
 | **Dock mode** | After 5 idle minutes (also on battery, stopping at 15%) a full-screen landscape display shows the clock, then each page with data in turn, jumps to Claude alerts, dims at night and guards against burn-in |
@@ -106,8 +107,7 @@ pose as your computer. [How pairing works](docs/hubuddy/ARCHITECTURE.md#pairing-
 | **Secure by design** | PIN lock with a forced first-login change, lockout and session timeout, Keystore-encrypted secrets, per-PC pinned certificates, one-time pairing secrets, per-phone tokens, private networks only |
 | **Tiny and fast** | Native Kotlin with no AndroidX, Material or OkHttp; no background service; polling stops when the app is not visible |
 
-Planned next (not in 3.0.0): touchpad and keyboard, volume/brightness/power, app launcher, Wake-on-LAN, screenshots,
-timers and world clocks, a rebuilt Settings main page, and Hindi and Telugu. See [release notes](docs/hubuddy/RELEASE_NOTES.md).
+Planned next: brightness, app launcher and decks, screenshots, timers and world clocks, a rebuilt Settings main page, and Hindi and Telugu. See [release notes](docs/hubuddy/RELEASE_NOTES.md).
 
 ## How it works
 
@@ -127,9 +127,9 @@ that PC decides what it means. Details in the [architecture guide](docs/hubuddy/
 
 ## Install on the PC
 
-* **Installer (recommended):** run `HubuddySetup-3.0.0.exe`. It adds a Start menu entry, can allow phones through the
+* **Installer (recommended):** run `HubuddySetup-3.1.0.exe`. It adds a Start menu entry, can allow phones through the
   Windows Firewall for **private** networks only, and can start Hubuddy when you sign in.
-* **Portable:** run `Hubuddy-3.0.0.exe` anywhere. Click *Allow through Windows Firewall* in its window once.
+* **Portable:** run `Hubuddy-3.1.0.exe` anywhere. Click *Allow through Windows Firewall* in its window once.
 * **From source:** Python 3.11+, `pip install -r agent/requirements.txt`, `python -m hubuddy_agent.launcher`.
 
 The programs are not code-signed, so Windows SmartScreen may say "unknown publisher": choose *More info → Run anyway*.
@@ -138,7 +138,7 @@ in [PC setup and API](docs/hubuddy/API_SETUP.md).
 
 ## Install on the phone
 
-Open `Hubuddy-3.0.0.apk` on the phone and allow *install unknown apps*. First login uses the temporary login number and
+Open `Hubuddy-3.1.0.apk` on the phone and allow *install unknown apps*. First login uses the temporary login number and
 PIN of your own build (see [build instructions](docs/hubuddy/BUILD_INSTRUCTIONS.md)); the app makes you choose your own PIN
 straight away.
 

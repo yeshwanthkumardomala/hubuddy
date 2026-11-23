@@ -84,6 +84,12 @@ Responses are JSON, `Cache-Control: no-store`. Only private-network clients are 
 | GET | `/api/inbox` | none | `{items:[{id,kind,text}]}` messages from the PC |
 | POST | `/api/inbox/ack` | `{"ids":[..]}` | `{ok}` |
 | POST | `/api/send` | `{"kind":"clipboard"|"link","text":".."}` | `{ok}` (links must be http/https) |
+| GET | `/api/remote` | none | `{allowed, battery}`; `allowed` is the PC owner's per-phone switch |
+| POST | `/api/input` | `{"events":[{"t":"move","dx":5,"dy":-2},{"t":"click","button":"left"},{"t":"scroll","dy":3},{"t":"key","key":"enter","mods":["ctrl"]},{"t":"text","text":".."}]}` | `{ok,count}`; up to 64 events, strict limits; 403 unless allowed, 429 when too fast, 501 off Windows |
+| POST | `/api/volume` | `{"action":"up"|"down"|"mute"}` | `{ok}` |
+| POST | `/api/power` | `{"action":"sleep"|"restart"|"shutdown"|"abort"}` | `{ok, delaySeconds}` (restart and shutdown wait 15 s; `abort` cancels) |
+| GET | `/api/processes` | none | `{items:[{pid,name,mem_mb}]}` |
+| POST | `/api/processes/end` | `{"pid":1234}` | `{ok}`; system programs are refused |
 | GET | `/api/files` | none | `{toPhone, received, maxBytes}` |
 | PUT | `/api/files/upload?name=..` | file bytes | `{ok, name, size}` into `Documents\Hubuddy\Received` |
 | GET | `/api/files/download?name=..` | none | file from `Documents\Hubuddy\ToPhone` |

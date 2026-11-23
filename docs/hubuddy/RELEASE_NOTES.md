@@ -1,5 +1,23 @@
 # Release notes
 
+## 3.1.0 — Remote control and Wake (2026-11-23)
+
+* **Remote control from the phone:** a touchpad (drag, tap to click, two fingers to scroll or right-click), a keyboard box with Enter,
+  Backspace, Esc, Tab and arrows, volume (quieter, mute, louder), and power (sleep, restart, shut down with a 15-second countdown and
+  a cancel button). Restart and shut down ask for confirmation on the phone.
+* **Off by default, and under the PC owner's control:** each paired phone has its own *Remote control* switch in Hubuddy on the PC (with a
+  confirmation when turning it on). Until it is on, every remote action is refused. Every keyboard, power and end-task action is
+  written to the activity log; actions are validated against a strict schema (limits on movement, text and keys), rate limited, and
+  never use a shell. Forgetting a phone removes the permission.
+* **Task manager lite (PC side):** the program can list the biggest programs and end one on request, refusing system programs
+  and itself. The phone screen for it is not built yet.
+* **Wake-on-LAN:** an offline paired PC shows *Wake this PC* on the All PCs screen; the phone sends the magic packet on its own network.
+  Needs Wake-on-LAN enabled in the PC's BIOS and network adapter, the same network, and does not work over USB tethering.
+* **Not in this release:** brightness, app/window launcher and decks, laptop battery on the tiles, screenshots, timers and world
+  clocks, the rebuilt Settings page, Hindi and Telugu (planned for 3.2 and 3.3).
+* **Limits:** Windows blocks injected input into elevated windows and the lock screen; the Windows input code has been run only through CI's
+  self-test and fakes, **not on a real desktop**, and the touchpad has not been felt on a real phone.
+
 ## 3.0.0 — Pair like a pro (2026-11-23)
 
 **Connecting, redesigned.** No Developer options, no `adb`, no typing IP addresses.

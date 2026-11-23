@@ -71,7 +71,16 @@ class SessionStore:
         return entry["hash"][:12]
 
     def listing(self) -> list[dict]:
-        return [{"id": self.session_id(e), "name": e["name"], "created": e["created"], "last_seen": e.get("last_seen", 0)} for e in self.entries]
+        return [{"id": self.session_id(e), "name": e["name"], "created": e["created"], "last_seen": e.get("last_seen", 0), "remote": bool(e.get("remote"))} for e in self.entries]
+
+    def set_remote(self, sid: str, allowed: bool) -> bool:
+        """Per-phone switch for remote control (mouse, keyboard, volume, power, end task). Off until the PC's owner turns it on."""
+        for e in self.entries:
+            if self.session_id(e) == sid:
+                e["remote"] = bool(allowed)
+                self._save()
+                return True
+        return False
 
     def revoke(self, sid: str) -> bool:
         before = len(self.entries)

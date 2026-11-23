@@ -1,4 +1,4 @@
-# Test report — Hubuddy 3.0.0
+# Test report — Hubuddy 3.1.0
 
 Date: 2026-11-23. Environments: Linux build container (OpenJDK 21, Gradle 8.14, AGP 8.7, Kotlin 2.0, Android SDK Platform 34,
 Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Python 3.12) for the PC program.
@@ -12,10 +12,10 @@ Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Py
 
 | Suite | Result |
 | --- | --- |
-| PC program tests (Python) | ✅ **101 pass** on Linux and on **real Windows** (CI) |
+| PC program tests (Python) | ✅ **112 pass** on Linux (the 3.0.0 set of 101 also passed on **real Windows** in CI; 3.1.0's CI run follows the release) |
 | `Hubuddy.exe --selftest` (20 checks: QR + PIN pairing, API, messages, files, discovery, forget) | ✅ passes as a Linux binary here, and as the **portable and the installed Windows program** in CI |
 | Windows installer | ✅ built, **installed silently, self-tested, uninstalled cleanly** on a Windows runner |
-| Android unit + Robolectric UI tests | ✅ **206 run, 0 failed** (13 skipped: 12 screenshot renders and the interop test unless a PC program runs) |
+| Android unit + Robolectric UI tests | ✅ **213 run, 0 failed** (13 skipped: 12 screenshot renders and the interop test unless a PC program runs) |
 | Interop test (`tools/interop.sh`): the app's real client against the real PC program | ✅ QR pairing, replay refused, identity pinned, inbox both ways, files both ways, traversal refused, PIN pairing with matching compare code, wrong PIN refused, forget signs the phone out |
 | Android Lint | ✅ 0 errors (one real finding fixed: a call missing before Android 7) |
 | Builds | ✅ debug and release APK, `com.sidya.hubuddy` 3.0.0, minSdk 21, INTERNET + ACCESS_NETWORK_STATE + CAMERA (camera optional) |
@@ -36,6 +36,19 @@ Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Py
 * **Discovery:** only the exact probe is answered, replies are rate limited and carry no secret; the app ignores malformed or
   non-local replies; address changes are followed by host id.
 * **QR:** a real invitation-sized QR is decoded from a synthetic camera frame; blank frames decode to nothing.
+
+## Added in 3.1.0 (remote control and Wake)
+
+* **Schema:** every input event is validated (types, ranges, whole numbers only, no booleans, text length and control characters, unknown
+  keys, modifiers and event types, batch size); 16 bad shapes are refused.
+* **Permission:** off by default for every phone; nothing reaches the backend while off; per phone; survives a restart; turning it off or
+  forgetting all phones removes it; allowed, power, key and end-task actions are in the activity log.
+* **Safety:** rate limit (429), protected programs refused, bad numbers are 400, an unsupported OS answers 501 instead of failing.
+* **Wake-on-LAN:** the magic packet bytes are identical in the PC code and the app (102 bytes, MAC repeated 16 times).
+* **App:** the Remote screen explains when it is off, shows the touchpad and sends typed text and keys when allowed (Android 5.0 to 14);
+  the interop test also proves the 403 → allow → 501-on-Linux path against the real PC program.
+* **Not verified:** mouse and keyboard injection through Windows `SendInput` on a real desktop, audio volume, sleep/restart/shutdown,
+  Wake-on-LAN hardware, and how the touchpad feels on a phone.
 
 ## Real bugs found by testing
 

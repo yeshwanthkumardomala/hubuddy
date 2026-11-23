@@ -58,6 +58,10 @@ class ControlsScreen(host: MainActivity) : Screen(host) {
                 })
             }
         })
+        addView(ui.card("Remote control", tag = "remote_card") {
+            addView(ui.text("Touchpad, keyboard, volume and power for this PC. The PC must allow it for this phone first.", 12f, Pal.dim), ui.lp(bottom = 8))
+            addView(ui.button("Open Remote control", primary = false, tag = "open_remote") { host.push(RemoteScreen(host)) })
+        })
         addView(ui.card("Send & files", tag = "send_card") {
             addView(ui.text("Send text, links, your clipboard and files to this PC, and receive what the PC sends you.", 12f, Pal.dim), ui.lp(bottom = 8))
             addView(ui.button("Open Send & files", primary = false, tag = "open_send") { host.push(SendScreen(host)) })

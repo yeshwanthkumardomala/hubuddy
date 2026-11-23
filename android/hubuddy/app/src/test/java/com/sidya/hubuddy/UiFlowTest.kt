@@ -206,6 +206,34 @@ class UiFlowTest {
         assertFalse(app().agent.isPaired("pc1"))
     }
 
+    @Test fun remoteScreenExplainsWhenOffAndSendsInputWhenAllowed() {
+        val allowedFlag = java.util.concurrent.atomic.AtomicBoolean(false)
+        val inputs = java.util.concurrent.CopyOnWriteArrayList<String>()
+        val server = MiniHttpServer { req ->
+            when (req.path) {
+                "/api/remote" -> 200 to """{"allowed":${allowedFlag.get()},"battery":null}"""
+                "/api/input" -> { inputs.add(req.body); 200 to """{"ok":true,"count":1}""" }
+                else -> 200 to """{"ok":true}"""
+            }
+        }.start()
+        try {
+            app().pairActivePc(server.port)
+            val m = loggedInMain()
+            m.push(com.sidya.hubuddy.ui.screens.RemoteScreen(m))
+            waitFor(5000) { m.byTag<View>("remoteOff") != null }
+            assertTrue(allText(m.window.decorView).contains("switch “Remote control” on"))
+            allowedFlag.set(true)
+            m.byTag<View>("remoteCheck")!!.performClick()
+            waitFor(5000) { m.byTag<View>("touchpad") != null }
+            m.byTag<EditText>("remoteText")!!.setText("hello")
+            m.byTag<View>("typeText")!!.performClick()
+            waitFor(5000) { inputs.any { it.contains("hello") } }
+            m.byTag<View>("key_enter")!!.performClick()
+            waitFor(5000) { inputs.any { it.contains("enter") } }
+            assertTrue(inputs.all { it.contains("events") })
+        } finally { server.stop() }
+    }
+
     @Test fun logoutReturnsToLogin() {
         val m = loggedInMain()
         m.byTag<View>("nav_Settings")!!.performClick()

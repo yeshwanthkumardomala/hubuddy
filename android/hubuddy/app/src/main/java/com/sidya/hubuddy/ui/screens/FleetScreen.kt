@@ -5,6 +5,7 @@ import android.view.View
 import android.widget.LinearLayout
 import com.sidya.hubuddy.core.PcRegistry
 import com.sidya.hubuddy.data.DashState
+import com.sidya.hubuddy.net.ApiResult
 import com.sidya.hubuddy.data.PcLive
 import com.sidya.hubuddy.ui.Fmt
 import com.sidya.hubuddy.ui.MainActivity
@@ -71,6 +72,11 @@ class FleetScreen(host: MainActivity) : Screen(host) {
                 if (p.paired && p.pc.address.isNotEmpty()) addView(ui.text(p.pc.address.substringBeforeLast(':'), 10f, Pal.dim))
             })
             addView(ui.text(statusLine, 12f, if (p.online) Pal.dim else color), ui.lp(bottom = 6))
+            if (!p.online && p.paired && p.pc.mac.isNotEmpty()) addView(ui.button("Wake this PC", primary = false, tag = "wake_${p.pc.id}") {
+                app.repo.background({ val n = com.sidya.hubuddy.net.Wake.send(p.pc.mac); if (n > 0) ApiResult.Ok(org.json.JSONObject(), 0) else ApiResult.Err(com.sidya.hubuddy.net.ErrKind.UNREACHABLE, "no network") }) { r ->
+                    host.toast(if (r is ApiResult.Ok) "Wake signal sent. It can take a minute. Needs Wake-on-LAN enabled on the PC and the same network." else "No local network to send it on.")
+                }
+            }, ui.lp(bottom = 6))
             if (stats == null) {
                 addView(ui.text(if (!p.paired) "Pair this PC in Settings to see its readings." else "No readings yet.", 12f, Pal.dim))
                 return@card

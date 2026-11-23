@@ -5,7 +5,7 @@ import webbrowser
 from dataclasses import dataclass, field
 from typing import Callable
 
-from . import clipboard, discovery
+from . import clipboard, discovery, remote as remote_mod
 from .activity import ActivityLog
 from .config import HOME_DIR
 from .files import Files
@@ -43,6 +43,7 @@ class Services:
     activity: ActivityLog
     set_clipboard: Callable[[str], bool] = clipboard.set_text
     open_link: Callable[[str], bool] = open_link
+    remote: object = None
     discovery_port: int = discovery.PORT
     discovery_transport: object = field(default=None, repr=False)
 
@@ -63,6 +64,7 @@ def build(home: pathlib.Path | None = None, name: str | None = None, files_root:
         sessions=SessionStore(home / "sessions.json"), pairing=PairingManager(), lockout=Lockout(),
         inbox=Inbox(home / "inbox.json"), status=PhoneStatus(), files=Files(files_root or default_files_root()),
         activity=ActivityLog(home / "activity.log"))
+    svc.remote = remote_mod.default_backend()
     for k, v in overrides.items():
         setattr(svc, k, v)
     return svc

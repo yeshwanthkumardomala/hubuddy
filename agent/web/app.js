@@ -32,7 +32,11 @@ async function refresh() {
     const r = el("div", "row"), l = el("div"); l.append(el("div", "", p.name));
     const st = p.status || {}; const bits = [`seen ${ago(p.last_seen)}`]; if (st.battery !== undefined) bits.push(`battery ${st.battery}%${st.charging ? " (charging)" : ""}`); if (st.network) bits.push(st.network);
     l.append(el("div", "dim", bits.join(" · "))); const b = el("button", "alt", "Forget"); b.onclick = async () => { await post("/local/forget", { id: p.id }); refresh(); };
-    r.append(l, b); ph.append(r);
+    const rc = el("button", p.remote ? "" : "alt", p.remote ? "Remote control: ON" : "Remote control: off");
+    rc.title = "Lets this phone move the mouse, type, change volume, sleep/restart/shut down and end programs on this PC";
+    rc.onclick = async () => { if (!p.remote && !confirm("Let " + p.name + " control this PC (mouse, keyboard, power, end programs)?")) return; await post("/local/remote", { id: p.id, on: !p.remote }); refresh(); };
+    const bx = el("div", "btns"); bx.append(rc, b);
+    r.append(l, bx); ph.append(r);
   });
   const tp = $("to-phone"); tp.replaceChildren(); s.toPhone.forEach(f => { const r = el("div", "row"); r.append(el("span", "", `${f.name} · ${size(f.size)}`)); const b = el("button", "alt", "Remove"); b.onclick = async () => { await post("/local/files/remove", { name: f.name }); refresh(); }; r.append(b); tp.append(r); });
   const rc = $("received"); rc.replaceChildren(); if (!s.received.length) rc.append(el("p", "dim", "Nothing yet.")); s.received.forEach(f => { const r = el("div", "row"); r.append(el("span", "", f.name), el("span", "dim", size(f.size))); rc.append(r); });
