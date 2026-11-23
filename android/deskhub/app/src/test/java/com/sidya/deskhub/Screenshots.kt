@@ -87,9 +87,8 @@ class Screenshots {
         }.start()
         try {
             val a = app()
-            a.settings.usbPort = server.port
+            a.pairActivePc(server.port, token)
             a.settings.weatherName = "Hyderabad, IN"; a.settings.weatherLat = 17.38; a.settings.weatherLon = 78.49
-            a.secrets.put(com.sidya.deskhub.net.CompanionLink.TOKEN, token)
             a.auth.login("123456789", "123456"); a.auth.changePin("123456", "482916", "482916")
             val m = Robolectric.buildActivity(MainActivity::class.java).setup().get()
             val end = System.currentTimeMillis() + 8000
@@ -110,12 +109,12 @@ class Screenshots {
         } finally { server.stop() }
     }
 
-    fun sampleSnapshot(): String {
+    fun sampleSnapshot(host: String = "YESH-LAPTOP", cpu: Double = 34.0, ramUsed: Double = 9.6, gpu: Int = 22, alert: Boolean = true): String {
         val now = System.currentTimeMillis() / 1000
         // A year of contribution levels (0-4), deterministic so screenshots are stable.
         val levels = (0 until 365).joinToString("") { i -> (((i * 7919) % 13 + (i / 30) % 3) % 5).let { if (i % 6 == 0) 0 else it }.toString() }
-        return """{"pc":{"online":true,"asleep":false,"hostname":"YESH-LAPTOP"},
-          "stats":{"cpu":34.0,"ram_used":9.6,"ram_total":16.0,"disk":58.0,"net_down":1840.0,"net_up":96.0,"gpu":22,"gpu_temp":54,
+        return """{"pc":{"online":true,"asleep":false,"hostname":"$host"},
+          "stats":{"cpu":$cpu,"ram_used":$ramUsed,"ram_total":16.0,"disk":58.0,"net_down":1840.0,"net_up":96.0,"gpu":$gpu,"gpu_temp":54,
                    "vram_used":1.8,"vram_total":6.0,"cpu_name":"AMD Ryzen 7 5800H","gpu_name":"NVIDIA GeForce RTX 3060 Laptop"},
           "claude":{"provider":"claude","today":{"tokens":1284000,"output":48200,"messages":214},"last_hour":182000,"last_active":${now - 20},
                     "limits":{"five_hour":{"pct":46.0,"reset":${now + 2 * 3600 + 900}},"seven_day":{"pct":21.0,"reset":${now + 4 * 86400}},"updated":${now - 30}},
@@ -134,7 +133,7 @@ class Screenshots {
              {"id":2,"label":"Mute mic","color":"#2B2F3A"},{"id":3,"label":"Screenshot","color":"#2B2F3A"},
              {"id":4,"label":"Volume up","color":"#24272B"},{"id":5,"label":"Downloads","color":"#24272B"}],"on":[2]},
           "github":{"login":"yeshwanthkumardomala","total":412,"today":6,"week":31,"last_week":24,"streak":9,"longest":21,"levels":"$levels","start_wday":2},
-          "network_extra":null}"""
+          "network_extra":null}""".let { if (alert) it else it.replace("\"alert\":{", "\"alert_off\":{") }
     }
 
     private fun injectInternetSamples() {
@@ -145,10 +144,7 @@ class Screenshots {
             "weather_code":[2,1,3,61,80,0],"temperature_2m_max":[31,30,29,26,27,30],"temperature_2m_min":[19,18,19,20,19,18]}}""")
         val github = JSONObject("""{"description":"Hubuddy: DeskHub SIDYA Edition and more","stargazers_count":3,"forks_count":0,
           "open_issues_count":1,"default_branch":"feature/deskhub-android","pushed_at":"2026-11-23T09:12:44Z","private":false}""")
-        val repo = app().repo
-        val f = repo.javaClass.getDeclaredField("state").apply { isAccessible = true }
-        val s = f.get(repo) as DashState
-        f.set(repo, s.copy(weather = weather, weatherAt = now, weatherError = null, github = github, githubAt = now, githubError = null))
+        app().repo.seedInternet(weather, github)
     }
 
     private fun <T> withSampleCompanion(block: () -> T): T {
@@ -160,10 +156,9 @@ class Screenshots {
         }.start()
         try {
             val a = app()
-            a.settings.usbPort = server.port
+            a.pairActivePc(server.port, token)
             a.settings.weatherName = "Hyderabad, IN"; a.settings.weatherLat = 17.38; a.settings.weatherLon = 78.49
             a.settings.nightEnabled = false
-            a.secrets.put(com.sidya.deskhub.net.CompanionLink.TOKEN, token)
             a.auth.login("123456789", "123456"); a.auth.changePin("123456", "482916", "482916")
             return block()
         } finally { server.stop() }
@@ -192,6 +187,76 @@ class Screenshots {
         while (!app().repo.state.online && System.currentTimeMillis() < end) idle(50)
         idle(1500)
         shot(d, "desk-99-night")
+    }
+
+    // ---- the redesign: themes, landscape, several PCs ---------------------------------------------
+    private val servers = ArrayList<MiniHttpServer>()
+    private fun fakePc(snap: String): Int {
+        val token = "k".repeat(43)
+        return MiniHttpServer { req ->
+            if (req.headers["authorization"] != "Bearer $token") 401 to "{}" else if (req.path == "/api/snapshot") 200 to snap else 200 to "{}"
+        }.start().also { servers += it }.port
+    }
+
+    private fun fleet(theme: String): MainActivity {
+        val a = app()
+        a.settings.theme = theme
+        a.settings.weatherName = "Hyderabad, IN"; a.settings.weatherLat = 17.38; a.settings.weatherLon = 78.49
+        a.pairActivePc(fakePc(sampleSnapshot()))
+        a.addPairedPc("Office PC", fakePc(sampleSnapshot("OFFICE-PC", 61.0, 12.4, 48, alert = false)))
+        a.addPairedPc("Home server", fakePc(sampleSnapshot("HOMESRV", 8.0, 5.1, 3, alert = false)))
+        val dead = java.net.ServerSocket(0).use { it.localPort }
+        a.addPairedPc("Old laptop", dead)
+        a.auth.login("123456789", "123456"); a.auth.changePin("123456", "482916", "482916")
+        val m = Robolectric.buildActivity(MainActivity::class.java).setup().get()
+        val end = System.currentTimeMillis() + 10_000
+        while (a.repo.state.onlineCount < 3 && System.currentTimeMillis() < end) idle(50)
+        idle(1200); injectInternetSamples()
+        return m
+    }
+
+    private fun tab(m: MainActivity, name: String) { m.window.decorView.findViewWithTag<View>("nav_$name").performClick(); idle(150) }
+
+    @Test fun fleetPortraitDark() {
+        val m = fleet("dark")
+        m.rerender(); shot(m, "20-home-4pcs-dark")
+        tab(m, "Monitor"); shot(m, "21-all-pcs-dark")
+    }
+
+    @Test fun portraitLight() {
+        val m = fleet("light")
+        m.rerender(); shot(m, "22-home-light")
+        tab(m, "Monitor"); shot(m, "23-all-pcs-light")
+        tab(m, "AI"); shot(m, "24-ai-light")
+        tab(m, "Controls"); shot(m, "25-controls-light")
+        tab(m, "Settings"); shot(m, "26-settings-light")
+    }
+
+    @Test @Config(qualifiers = "w772dp-h360dp-land-xhdpi") fun landscapeDark() {
+        val m = fleet("dark")
+        m.rerender(); shot(m, "30-landscape-home-dark")
+        tab(m, "Monitor"); shot(m, "31-landscape-all-pcs-dark")
+        m.window.decorView.findViewWithTag<View>("chip_pc1").performClick(); idle(150); shot(m, "32-landscape-monitor-one-pc-dark")
+        tab(m, "AI"); shot(m, "33-landscape-ai-dark")
+        tab(m, "Controls"); shot(m, "34-landscape-controls-dark")
+        tab(m, "Settings"); shot(m, "35-landscape-settings-dark")
+    }
+
+    @Test @Config(qualifiers = "w772dp-h360dp-land-xhdpi") fun landscapeLight() {
+        val m = fleet("light")
+        m.rerender(); shot(m, "40-landscape-home-light")
+        tab(m, "Monitor"); shot(m, "41-landscape-all-pcs-light")
+        tab(m, "AI"); shot(m, "42-landscape-ai-light")
+    }
+
+    @Test @Config(qualifiers = "w772dp-h360dp-land-xhdpi") fun deskFleet() {
+        fleet("dark")
+        val d = Robolectric.buildActivity(com.sidya.deskhub.ui.desk.DeskActivity::class.java).setup().get()
+        idle(400)
+        var guard = 0
+        while (d.window.decorView.findViewWithTag<android.widget.TextView>("desk_title").text.toString() != "ALL PCS" && guard++ < 12) { d.next(); idle(60) }
+        idle(600)
+        shot(d, "desk-fleet")
     }
 
     @Test @Config(qualifiers = "w760dp-h360dp-land-xhdpi") fun landscape() {

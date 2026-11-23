@@ -2,21 +2,22 @@
 
 # Hubuddy DeskHub — SIDYA Edition
 
-**Turn any Android phone into a desk dashboard for your Windows PC.**
-Live PC stats, Claude Code monitoring, media and shortcut controls, and a landscape *desk mode*
-that rotates through everything while your phone charges beside the keyboard.
+**Turn any Android phone into a desk dashboard for your Windows PCs and laptops.**
+Live stats for up to 8 machines on one screen, Claude Code monitoring, media and shortcut controls,
+light and dark themes, a landscape layout with a side rail, and an idle *desk mode* that rotates through
+everything while the phone stands beside your keyboard.
 
 [![Android 5.0+](https://img.shields.io/badge/Android-5.0%2B-3DDC84?logo=android&logoColor=white)](#compatibility)
 [![Kotlin](https://img.shields.io/badge/Kotlin-native-7F52FF?logo=kotlin&logoColor=white)](android/deskhub)
-[![Tests](https://img.shields.io/badge/tests-147%20Android%20%2B%2013%20bridge%20passing-2EC4B6)](docs/deskhub/TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/tests-174%20Android%20%2B%2013%20bridge%20passing-2EC4B6)](docs/deskhub/TEST_REPORT.md)
 [![APK size](https://img.shields.io/badge/APK-~1%20MB-8A5A3B)](releases)
 [![Based on DeskHub](https://img.shields.io/badge/based%20on-DeskHub%20(MIT)-blue)](docs/deskhub/THIRD_PARTY_NOTICES.md)
 
-### [⬇ Download the APK (v1.2.0)](https://github.com/yeshwanthkumardomala/hubuddy/raw/feature/deskhub-android/releases/Hubuddy-DeskHub-1.2.0.apk)
+### [⬇ Download the APK (v1.3.0)](https://github.com/yeshwanthkumardomala/hubuddy/raw/feature/deskhub-android/releases/Hubuddy-DeskHub-1.3.0.apk)
 
-<sub>Android 5.0+ · about 1 MB · [checksum](releases/Hubuddy-DeskHub-1.2.0.apk.sha256) · [all releases](releases)</sub>
+<sub>Android 5.0+ · about 1 MB · [checksum](releases/Hubuddy-DeskHub-1.3.0.apk.sha256) · [all releases](releases)</sub>
 
-<img src="docs/deskhub/screenshots/phone/desk-08-pc.png" width="88%" alt="Desk mode: PC gauges">
+<img src="docs/deskhub/screenshots/phone/31-landscape-all-pcs-dark.png" width="92%" alt="Landscape: all PCs at a glance">
 
 </div>
 
@@ -26,27 +27,43 @@ that rotates through everything while your phone charges beside the keyboard.
 
 > Rendered from the real app code with sample data (Android 14 runtime, Vivo 1902-sized screen). They are not photos of a physical phone.
 
+**Landscape: side rail, columns, every PC at once**
+
 <table>
 <tr>
-<td align="center"><img src="docs/deskhub/screenshots/phone/03-home.png" width="200"><br><sub>Home</sub></td>
-<td align="center"><img src="docs/deskhub/screenshots/phone/04-monitor.png" width="200"><br><sub>PC monitor</sub></td>
-<td align="center"><img src="docs/deskhub/screenshots/phone/07-ai-claude-code.png" width="200"><br><sub>Claude Code</sub></td>
-<td align="center"><img src="docs/deskhub/screenshots/phone/08-controls.png" width="200"><br><sub>Controls</sub></td>
+<td><img src="docs/deskhub/screenshots/phone/30-landscape-home-dark.png" width="400"></td>
+<td><img src="docs/deskhub/screenshots/phone/33-landscape-ai-dark.png" width="400"></td>
+</tr>
+<tr>
+<td><img src="docs/deskhub/screenshots/phone/40-landscape-home-light.png" width="400"></td>
+<td><img src="docs/deskhub/screenshots/phone/41-landscape-all-pcs-light.png" width="400"></td>
 </tr>
 </table>
 
-### Desk mode: landscape, hands-off
+**Portrait, in dark and light**
+
+<table>
+<tr>
+<td align="center"><img src="docs/deskhub/screenshots/phone/20-home-4pcs-dark.png" width="190"><br><sub>Home, several PCs</sub></td>
+<td align="center"><img src="docs/deskhub/screenshots/phone/21-all-pcs-dark.png" width="190"><br><sub>All PCs</sub></td>
+<td align="center"><img src="docs/deskhub/screenshots/phone/22-home-light.png" width="190"><br><sub>Light theme</sub></td>
+<td align="center"><img src="docs/deskhub/screenshots/phone/07-ai-claude-code.png" width="190"><br><sub>Claude Code</sub></td>
+<td align="center"><img src="docs/deskhub/screenshots/phone/08-controls.png" width="190"><br><sub>Controls</sub></td>
+</tr>
+</table>
+
+**Desk mode: starts by itself when the phone is left alone**
 
 <table>
 <tr>
 <td><img src="docs/deskhub/screenshots/phone/desk-07-clock.png" width="260"></td>
+<td><img src="docs/deskhub/screenshots/phone/desk-fleet.png" width="260"></td>
 <td><img src="docs/deskhub/screenshots/phone/desk-01-claude.png" width="260"></td>
-<td><img src="docs/deskhub/screenshots/phone/desk-06-github.png" width="260"></td>
 </tr>
 <tr>
-<td><img src="docs/deskhub/screenshots/phone/desk-04-weather.png" width="260"></td>
+<td><img src="docs/deskhub/screenshots/phone/desk-06-github.png" width="260"></td>
 <td><img src="docs/deskhub/screenshots/phone/desk-05-network.png" width="260"></td>
-<td><img src="docs/deskhub/screenshots/phone/desk-02-media.png" width="260"></td>
+<td><img src="docs/deskhub/screenshots/phone/desk-04-weather.png" width="260"></td>
 </tr>
 </table>
 
@@ -56,11 +73,13 @@ that rotates through everything while your phone charges beside the keyboard.
 
 | | |
 | --- | --- |
+| **Up to 8 PCs and laptops** | Connect all your machines and see every reading in one place: the **All PCs** overview shows CPU, RAM, GPU or disk, temperature, network speed and Claude state for each; Home shows a one-line summary; tap one to focus it. Each PC reconnects on its own, so an offline machine never slows the rest |
 | **PC monitor** | CPU, RAM, disk, GPU, VRAM and GPU temperature, network throughput, online and display-asleep state |
 | **Claude Code** | Running, idle or *waiting for permission*; focus or dismiss the window from the phone; 5-hour and weekly limits with reset times; tokens, per-model use and a 7-day chart |
 | **Controls** | Media play, pause and skip; your PC shortcut buttons (confirmed before they run); phone shortcuts for links and apps |
 | **Calendar, weather, network, GitHub** | Upcoming events; Open-Meteo forecast for any city; latency, packet loss, data use and speed test; repository stats and a contribution heatmap |
-| **Desk mode** | Full-screen landscape display that starts after 5 idle minutes while charging, rotates every page with data, jumps to Claude alerts, dims at night and guards against burn-in |
+| **Desk mode** | The clock lives here, not on the everyday screens. After 5 idle minutes (also on battery, stopping at 15%) a full-screen landscape display rotates through every page with data, jumps to Claude alerts, dims to a clock at night and guards against burn-in |
+| **Looks** | Auto, Dark, Black and Light themes; a side rail and 2 to 4 card columns in landscape; a bottom bar in portrait |
 | **Offline first** | Opens with no PC and no internet; shows the clock and the last saved data with its age; reconnects by itself with back-off; never shows invented numbers |
 | **Secure by design** | PIN lock with a forced first-login change, lockout and session timeout, Keystore-encrypted secrets, per-device pairing tokens, local-network-only bridge |
 | **Tiny and fast** | Native Kotlin with no AndroidX, Material or OkHttp; about 1 MB APK (80 to 100 KB optimised), no background service, polling stops when the app is not visible |
@@ -68,23 +87,23 @@ that rotates through everything while your phone charges beside the keyboard.
 ## How it works
 
 ```
- Windows PC                                         Phone (Android 5.0+)
- ┌───────────────────────────────────┐   USB       ┌─────────────────────────────┐
- │ DeskHub companion (unchanged)     │  (adb       │ Hubuddy DeskHub app         │
- │   stats · media · Claude Code ·   │   reverse)  │   Home · Monitor · AI ·     │
- │   calendar · internet · shortcuts │      or     │   Controls · Settings       │
- │ Hubuddy bridge  :8765  ◄──────────┼─ Wi-Fi ────►│   Desk mode (landscape)     │
- │   pairing · token auth · limits   │  (LAN only) │   Weather + GitHub direct   │
- └───────────────────────────────────┘             └─────────────────────────────┘
+ PC 1 (Windows)      PC 2 (laptop)     ...up to 8              Phone (Android 5.0+)
+ ┌───────────────┐   ┌───────────────┐                        ┌─────────────────────────────┐
+ │ DeskHub       │   │ DeskHub       │                        │ Hubuddy DeskHub app         │
+ │ companion     │   │ companion     │   USB (one PC)         │   Home · Monitor · AI ·     │
+ │ + Hubuddy     │   │ + Hubuddy     │◄─ or Wi-Fi (any) ─────►│   Controls · Settings       │
+ │ bridge :8765  │   │ bridge :8765  │   LAN only             │   All PCs overview          │
+ └───────────────┘   └───────────────┘                        │   Desk mode (landscape)     │
+                                                              └─────────────────────────────┘
 ```
 
-The phone never runs commands itself: it asks the bridge to do a fixed action (media control, shortcut
-number, alert action), and the PC decides what that means. Details in the
-[architecture guide](docs/deskhub/ARCHITECTURE.md).
+Each computer runs its own bridge, and the phone pairs with each one separately. The phone never runs
+commands itself: it asks a bridge to do a fixed action (media control, shortcut number, alert action), and
+that PC decides what it means. Details in the [architecture guide](docs/deskhub/ARCHITECTURE.md).
 
 ## Quick start
 
-**1. Install the app.** Download the APK above, open it on the phone and allow *install unknown apps*, or use `adb install -r Hubuddy-DeskHub-1.2.0.apk`.
+**1. Install the app.** Download the APK above, open it on the phone and allow *install unknown apps*, or use `adb install -r Hubuddy-DeskHub-1.3.0.apk`.
 
 **2. First login.** Use the temporary login number and PIN from your setup notes. The app makes you
 choose your own PIN straight away, and the temporary one stops working.
@@ -97,10 +116,14 @@ cd companion-bridge
 .\start-bridge.ps1 -Companion C:\path\to\deskhub\companion -Lan     # or Wi-Fi, same network only
 ```
 
-**4. Pair.** The bridge prints a 6-digit code. In the app: *Settings → Connection* (USB, or Wi-Fi with
+**4. Pair.** The bridge prints a 6-digit code. In the app: *Settings → PCs and laptops* (USB, or Wi-Fi with
 the PC's IP) → *Test connection* → enter the code → *Pair*.
 
-**5. Put the phone on a stand, plug it in, and leave it.** Desk mode starts on its own.
+**More computers?** Start a bridge with `-Lan` on each one, then in the app tap *+ Add PC*, enter its IP and
+pair it the same way (up to 8; USB serves one cable, so use Wi-Fi for the others). Then open
+*Monitor → All PCs*.
+
+**5. Put the phone on a stand and leave it.** After 5 idle minutes desk mode starts on its own and shows the time first. Plugging the phone in is recommended; on battery it stops at 15%.
 
 Full guide: [companion and API setup](docs/deskhub/API_SETUP.md).
 

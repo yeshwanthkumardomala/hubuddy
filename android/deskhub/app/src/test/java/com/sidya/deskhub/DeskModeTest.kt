@@ -8,7 +8,6 @@ import android.view.View
 import android.widget.TextView
 import com.sidya.deskhub.core.MemoryKeyValue
 import com.sidya.deskhub.core.Settings
-import com.sidya.deskhub.net.CompanionLink
 import com.sidya.deskhub.ui.MainActivity
 import com.sidya.deskhub.ui.desk.DeskActivity
 import org.junit.After
@@ -53,8 +52,7 @@ class DeskModeTest {
             if (req.headers["authorization"] != "Bearer $token") 401 to "{}"
             else if (req.path == "/api/snapshot") 200 to snapshot else 200 to """{"ok":true}"""
         }.start()
-        app().settings.usbPort = server!!.port
-        app().secrets.put(CompanionLink.TOKEN, token)
+        app().pairActivePc(server!!.port, token)
     }
 
     private fun desk(): DeskActivity = Robolectric.buildActivity(DeskActivity::class.java).setup().get()
@@ -72,6 +70,47 @@ class DeskModeTest {
             Intent(Intent.ACTION_BATTERY_CHANGED).putExtra(BatteryManager.EXTRA_PLUGGED, if (plugged) BatteryManager.BATTERY_PLUGGED_USB else 0))
     }
 
+    private fun battery(level: Int, plugged: Boolean) {
+        RuntimeEnvironment.getApplication().sendStickyBroadcast(
+            Intent(Intent.ACTION_BATTERY_CHANGED).putExtra(BatteryManager.EXTRA_LEVEL, level).putExtra(BatteryManager.EXTRA_SCALE, 100)
+                .putExtra(BatteryManager.EXTRA_PLUGGED, if (plugged) BatteryManager.BATTERY_PLUGGED_USB else 0))
+    }
+
+    @Test fun startsOnBatteryByDefaultButNotWhenNearlyFlat() {
+        battery(80, false)
+        val m = Robolectric.buildActivity(MainActivity::class.java).setup().get()
+        assertTrue("on battery is allowed by default", app().settings.deskOnBattery)
+        assertTrue(m.shouldStartDesk(m.lastTouchAt + 5 * 60_000))
+        battery(12, false)
+        assertFalse("12% is too low", m.shouldStartDesk(m.lastTouchAt + 60 * 60_000))
+        battery(12, true)
+        assertTrue("charging always allowed", m.shouldStartDesk(m.lastTouchAt + 5 * 60_000))
+    }
+
+    @Test fun lowBatteryLeavesDeskMode() {
+        battery(80, false)
+        val d = desk(); idle(1200)
+        assertFalse(d.isFinishing)
+        battery(10, false)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2)); idle(100)
+        assertTrue("desk mode stops itself instead of draining the phone", d.isFinishing)
+    }
+
+    @Test fun allPcsPageAppearsOnlyWithSeveralPcs() {
+        companion(Screenshots().sampleSnapshot().replace("\"alert\":{", "\"alert_off\":{"))
+        val d = desk(); waitOnline()
+        assertFalse(d.rotation(app().repo.state).map { it.id }.contains("fleet"))
+        app().addPairedPc("Laptop", server!!.port)
+        app().repo.refreshNow()
+        val end = System.currentTimeMillis() + 8000
+        while (app().repo.state.onlineCount < 2 && System.currentTimeMillis() < end) idle(50)
+        assertTrue(d.rotation(app().repo.state).map { it.id }.contains("fleet"))
+        var guard = 0
+        while (title(d) != "ALL PCS" && guard++ < 12) { d.next(); idle(30) }
+        assertEquals("ALL PCS", title(d))
+        assertNotNull(d.window.decorView.findViewWithTag<View>("desk_pc_pc2"))
+    }
+
     @Test fun startsAfterIdleWhileCharging() {
         charging(true)
         val m = Robolectric.buildActivity(MainActivity::class.java).setup().get()
@@ -84,6 +123,7 @@ class DeskModeTest {
 
     @Test fun doesNotStartWhenDisabledOrOnBattery() {
         charging(false)
+        app().settings.deskOnBattery = false
         val m = Robolectric.buildActivity(MainActivity::class.java).setup().get()
         assertFalse("on battery, not allowed", m.shouldStartDesk(m.lastTouchAt + 60 * 60_000))
         app().settings.deskOnBattery = true

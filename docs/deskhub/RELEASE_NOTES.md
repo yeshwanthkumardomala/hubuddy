@@ -1,5 +1,26 @@
 # Release notes
 
+## 1.3.0 — Redesign, light theme and multiple PCs (2026-11-23)
+
+* **New layout.** Landscape (and any wide screen) gets a navigation rail on the left and content in
+  2 to 4 columns, so the whole height is for content. Portrait keeps a bottom bar, now with icons.
+  Cards, headers and spacing were reworked; the status chip shows the connection and opens a PC picker.
+* **No clock in everyday use.** The big clock and date left the Home screen. The time now appears only in
+  desk mode, which starts after the idle time (default 5 minutes).
+* **Desk mode defaults:** it now also starts on battery (setting "Also run when not charging", on by
+  default) and stops itself at 15% battery so the phone is never drained flat. It follows the chosen theme
+  by day and switches to pure black with a dim clock at night.
+* **Appearance:** Auto (follows the phone), Dark, Black and **Light**. Colours were checked for readable
+  contrast in every look; dialogs, status bar and system icons follow the theme.
+* **Several PCs:** connect up to **8 PCs or laptops**. Each has its own name, address and pairing. The
+  **All PCs** overview (Monitor tab) shows every machine's CPU, RAM, GPU or disk, temperature, network
+  speed and Claude state at once; Home shows a one-line summary per PC; desk mode has an All PCs page. Tap
+  a tile to make that PC the one Home, AI and Controls show. Each PC polls and reconnects on its own, so one
+  offline PC never slows the others, and each keeps its own offline cache.
+* A PC still called "My PC" or "PC 2" takes the computer name it reports.
+* An earlier single-PC setup is converted automatically into the first entry.
+* Tests: 174 run, all passing (UI tests on Android 5.0 to 14).
+
 ## 1.2.0 — Desk mode (2026-11-23)
 
 * **Desk mode:** a DeskHub-style full-screen landscape display (both landscape directions) with a

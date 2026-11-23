@@ -79,6 +79,20 @@ thread so a slow internet connection never delays PC data.
 | Commands | Fixed verbs with validated arguments (`toggle/next/prev`, shortcut index range-checked, alert `focus/dismiss`). No command strings travel over the network. The app asks for confirmation before running PC shortcuts and speed tests. |
 | Transport | Plain HTTP is **not encrypted**. USB mode keeps traffic on the cable. In Wi-Fi mode use a trusted network. |
 
+## Several PCs, themes and layout (1.3.0)
+
+* **PCs:** `PcRegistry` keeps up to 8 `PcProfile`s (name, USB or Wi-Fi, address). Each PC has its own
+  pairing token in the Keystore-encrypted store (`pc.<id>.token`). `DashboardRepository` runs one
+  independent poller per PC on a small thread pool, each with its own back-off and
+  `snapshot_<id>.json` offline cache. `DashState` mirrors the *selected* PC in its plain fields (so Home,
+  AI and Controls stay simple) and carries `pcs` for the overview screens (All PCs, Home summary, desk
+  All PCs page). USB (`adb reverse`) maps one cable to one PC, so additional PCs use Wi-Fi.
+* **Themes:** `Pal` holds the colours (Dark, Black, Light, Auto). Views read it when they are built; a
+  theme change rebuilds the frame. A test checks contrast of every colour pair in every look.
+* **Layout:** `MainActivity` builds a portrait frame (header + bottom bar) or a landscape frame (rail +
+  content). `Screen.columns` flows cards into 1 to 4 columns by width, placing each card in the
+  currently shortest column. There is no clock on the everyday screens; it lives in desk mode.
+
 ## Bridge API (summary — details in API_SETUP.md)
 
 | Method | Path | Auth | Purpose |

@@ -29,7 +29,8 @@ class LoginActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) // keep the PIN out of screenshots/recents
         val app = DeskHubApp.of(this)
-        Pal.apply(app.settings.theme)
+        Pal.apply(app.settings.theme, this)
+        Pal.styleWindow(this)
         val auth = app.auth
         if (auth.hasSession()) {
             route(auth.mustChangePin)

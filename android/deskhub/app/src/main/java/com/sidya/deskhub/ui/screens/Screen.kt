@@ -57,15 +57,31 @@ abstract class Screen(val host: MainActivity) {
         return (0 until length()).mapNotNull { optJSONObject(it) }
     }
 
-    /** Lay out cards in one column (portrait) or two (landscape). */
-    fun columns(cards: List<View>): View {
-        if (!host.isLandscape) return ui.vbox { cards.forEach { addView(it) } }
+    /** Page title shown in the landscape header for secondary pages (null = the tab name). */
+    open val title: String? get() = null
+
+    /** Lay out cards in 1-3 columns by screen width, putting each card in the currently shortest column. */
+    fun columns(cards: List<View>, minColumnDp: Int? = null): View {
+        val n = if (minColumnDp == null) host.columnCount else ((host.contentWidthDp - 24) / minColumnDp).coerceIn(1, 4)
+        if (n <= 1) return ui.vbox { cards.forEach { addView(it) } }
+        val cols = List(n) { ui.vbox() }
+        val weight = IntArray(n)
+        cards.forEach { c ->
+            val i = weight.indices.minByOrNull { weight[it] } ?: 0
+            cols[i].addView(c)
+            weight[i] += 2 + ((c as? android.view.ViewGroup)?.let { countViews(it) } ?: 1)
+        }
         return ui.hbox {
             gravity = android.view.Gravity.TOP
-            val left = ui.vbox(); val right = ui.vbox()
-            cards.forEachIndexed { i, c -> (if (i % 2 == 0) left else right).addView(c) }
-            addView(left, ui.lp(0, -2, 1f).apply { rightMargin = ui.dp(5) })
-            addView(right, ui.lp(0, -2, 1f).apply { leftMargin = ui.dp(5) })
+            cols.forEachIndexed { i, col ->
+                addView(col, ui.lp(0, -2, 1f).apply { leftMargin = if (i == 0) 0 else ui.dp(5); rightMargin = if (i == n - 1) 0 else ui.dp(5) })
+            }
         }
+    }
+
+    private fun countViews(g: android.view.ViewGroup): Int {
+        var c = 0
+        for (i in 0 until g.childCount) { val v = g.getChildAt(i); c += if (v is android.view.ViewGroup) countViews(v) else 1 }
+        return c
     }
 }

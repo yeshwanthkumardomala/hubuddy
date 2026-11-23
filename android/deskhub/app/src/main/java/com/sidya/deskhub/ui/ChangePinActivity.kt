@@ -30,7 +30,8 @@ class ChangePinActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         val app = DeskHubApp.of(this)
-        Pal.apply(app.settings.theme)
+        Pal.apply(app.settings.theme, this)
+        Pal.styleWindow(this)
         if (!app.auth.hasSession()) {
             startActivity(Intent(this, LoginActivity::class.java)); finish(); return
         }

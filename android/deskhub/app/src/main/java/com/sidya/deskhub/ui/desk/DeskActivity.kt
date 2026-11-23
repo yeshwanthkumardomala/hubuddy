@@ -74,7 +74,7 @@ class DeskActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Pal.apply(app.settings.theme)
+        Pal.apply(app.settings.theme, this)
         ui = Ui(this)
         if (!app.auth.canAccessDashboard()) {
             startActivity(Intent(this, LoginActivity::class.java)); finish(); return
@@ -126,6 +126,7 @@ class DeskActivity : Activity() {
 
     override fun onPause() {
         resumed = false
+        Pal.apply(app.settings.theme, this) // night may have switched to black; MainActivity expects the chosen theme
         handler.removeCallbacks(ticker)
         app.repo.removeListener(listener)
         app.repo.stop()
@@ -186,7 +187,15 @@ class DeskActivity : Activity() {
         val cal = Calendar.getInstance()
         val pcAsleep = s.online && section(s, "pc")?.optBoolean("asleep") == true
         val wantNight = app.settings.isNight(cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)) || pcAsleep
-        if (wantNight != night) { night = wantNight; applyNight(s); return }
+        if (wantNight != night) {
+            // Night is always pure black with a dim clock, whatever theme is chosen for the day.
+            night = wantNight
+            Pal.apply(if (night) "black" else app.settings.theme, this)
+            buildChrome()
+            applyNight(s)
+            return
+        }
+        if (lowBattery(this)) { exitDesk(); return } // never drain the phone flat
         if (night) { current?.tick(); burnInShift(now); return }
         if (current == null) { next(s); return }
         current?.tick()
@@ -299,14 +308,33 @@ class DeskActivity : Activity() {
     }
 
     private fun updateKeepAwake() {
-        if (isCharging(this) || app.settings.deskOnBattery) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        if (mayStayOn(this, app.settings)) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 
     companion object {
-        fun isCharging(ctx: Context): Boolean = try {
-            val i = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            (i?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
-        } catch (e: Exception) { false }
+        private fun battery(ctx: Context): Intent? = try {
+            ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        } catch (e: Exception) { null }
+
+        fun isCharging(ctx: Context): Boolean = (battery(ctx)?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+
+        /** Battery percentage, or -1 when the phone does not say. */
+        fun batteryPercent(ctx: Context): Int {
+            val i = battery(ctx) ?: return -1
+            val level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
+            return if (level < 0 || scale <= 0) -1 else level * 100 / scale
+        }
+
+        fun lowBattery(ctx: Context): Boolean {
+            if (isCharging(ctx)) return false
+            val pct = batteryPercent(ctx)
+            return pct in 0..com.sidya.deskhub.core.LOW_BATTERY_PCT
+        }
+
+        /** Desk mode may keep the screen on: while charging, or on battery when allowed and not nearly flat. */
+        fun mayStayOn(ctx: Context, s: com.sidya.deskhub.core.Settings): Boolean =
+            isCharging(ctx) || (s.deskOnBattery && !lowBattery(ctx))
     }
 }

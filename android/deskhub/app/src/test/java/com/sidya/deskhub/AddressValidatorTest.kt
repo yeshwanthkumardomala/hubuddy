@@ -33,15 +33,18 @@ class AddressValidatorTest {
 class SettingsTest {
     @Test fun persistsAndClamps() {
         val kv = MemoryKeyValue()
-        Settings(kv).apply { mode = "wifi"; wifiAddress = " 192.168.1.5:8765 "; refreshSec = 1; timeoutSec = 99; theme = "black" }
+        Settings(kv).apply { refreshSec = 1; timeoutSec = 99; theme = "light" }
         val s = Settings(kv) // a "restart"
-        assertEquals("wifi", s.mode)
-        assertEquals("192.168.1.5:8765", s.companionAddress())
         assertEquals(2, s.refreshSec)
         assertEquals(30, s.timeoutSec)
-        assertEquals("black", s.theme)
-        s.mode = "usb"; s.usbPort = 9000
-        assertEquals("127.0.0.1:9000", Settings(kv).companionAddress())
+        assertEquals("light", s.theme)
+        listOf("auto", "dark", "black", "light").forEach { s.theme = it; assertEquals(it, Settings(kv).theme) }
+        s.theme = "neon"; assertEquals("dark", s.theme)
+    }
+
+    @Test fun oldCharcoalThemeMapsToDark() {
+        val kv = MemoryKeyValue(); kv.putString("cfg.theme", "charcoal")
+        assertEquals("dark", Settings(kv).theme)
     }
 
     @Test fun parsesShortcuts() {

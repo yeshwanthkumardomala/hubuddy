@@ -2,6 +2,7 @@ package com.sidya.deskhub.ui
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -16,26 +17,88 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 
-/** Colour palette; [apply] switches between charcoal and pure-black surfaces. */
+/**
+ * Colour palette with four looks: "dark" (charcoal), "black" (pure black), "light" and "auto"
+ * (follows the phone's dark-mode setting). Values are read at view-build time, so changing the
+ * theme only needs the screens to be rebuilt.
+ */
 object Pal {
     var bg = 0xFF0E0F11.toInt()
     var surface = 0xFF1A1C1F.toInt()
     var surface2 = 0xFF24272B.toInt()
-    const val walnut = 0xFF8A5A3B.toInt()
-    const val walnutDim = 0xFF5C3D29.toInt()
-    const val accent = 0xFF2EC4B6.toInt()
-    const val text = 0xFFF2F3F5.toInt()
-    const val dim = 0xFF9AA0A6.toInt()
-    const val ok = 0xFF3DDC84.toInt()
-    const val warn = 0xFFF4B400.toInt()
-    const val bad = 0xFFEF5350.toInt()
+    var walnut = 0xFF8A5A3B.toInt()
+    var walnutDim = 0xFF5C3D29.toInt()
+    var accent = 0xFF2EC4B6.toInt()
+    var onAccent = Color.BLACK
+    var text = 0xFFF2F3F5.toInt()
+    var dim = 0xFF9AA0A6.toInt()
+    var ok = 0xFF3DDC84.toInt()
+    var warn = 0xFFF4B400.toInt()
+    var bad = 0xFFEF5350.toInt()
+    var isLight = false
+    /** The concrete look in use: "dark", "black" or "light". */
+    var current = "dark"
 
-    fun apply(theme: String) {
-        if (theme == "black") {
-            bg = Color.BLACK; surface = 0xFF111214.toInt(); surface2 = 0xFF1B1D20.toInt()
-        } else {
-            bg = 0xFF0E0F11.toInt(); surface = 0xFF1A1C1F.toInt(); surface2 = 0xFF24272B.toInt()
+    fun resolve(theme: String, ctx: Context?): String {
+        if (theme != "auto") return if (theme == "black" || theme == "light") theme else "dark"
+        val night = ctx != null &&
+            (ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        return if (night) "dark" else "light"
+    }
+
+    fun apply(theme: String, ctx: Context? = null): String {
+        val look = resolve(theme, ctx)
+        isLight = look == "light"
+        current = look
+        when (look) {
+            "light" -> {
+                bg = 0xFFF2F3F5.toInt(); surface = 0xFFFFFFFF.toInt(); surface2 = 0xFFE6E8EB.toInt()
+                walnut = 0xFF8A5A3B.toInt(); walnutDim = 0xFFDCCFC4.toInt()
+                accent = 0xFF0B8379.toInt(); onAccent = Color.WHITE
+                text = 0xFF15181B.toInt(); dim = 0xFF5B626A.toInt()
+                ok = 0xFF18864F.toInt(); warn = 0xFF9A5B00.toInt(); bad = 0xFFC62828.toInt()
+            }
+            "black" -> darkBase(Color.BLACK, 0xFF111214.toInt(), 0xFF1B1D20.toInt())
+            else -> darkBase(0xFF0E0F11.toInt(), 0xFF1A1C1F.toInt(), 0xFF24272B.toInt())
         }
+        return look
+    }
+
+    private fun darkBase(b: Int, s1: Int, s2: Int) {
+        bg = b; surface = s1; surface2 = s2
+        walnut = 0xFF8A5A3B.toInt(); walnutDim = 0xFF5C3D29.toInt()
+        accent = 0xFF2EC4B6.toInt(); onAccent = Color.BLACK
+        text = 0xFFF2F3F5.toInt(); dim = 0xFF9AA0A6.toInt()
+        ok = 0xFF3DDC84.toInt(); warn = 0xFFF4B400.toInt(); bad = 0xFFEF5350.toInt()
+    }
+
+    /** Status/navigation bar colours and icon contrast to match the current look. */
+    @Suppress("DEPRECATION")
+    fun styleWindow(a: android.app.Activity) {
+        val w = a.window
+        w.statusBarColor = bg
+        w.navigationBarColor = bg
+        if (android.os.Build.VERSION.SDK_INT < 23) {
+            // Dark status-bar icons need Android 6. Before that, keep the icons light and give the bar a dark shade.
+            if (isLight) w.statusBarColor = 0xFF4A4F55.toInt()
+            return
+        }
+        if (isLight && android.os.Build.VERSION.SDK_INT < 26) w.navigationBarColor = 0xFF4A4F55.toInt() // no dark nav icons before Android 8
+        var flags = w.decorView.systemUiVisibility
+        var light = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        if (android.os.Build.VERSION.SDK_INT >= 26) light = light or android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        flags = if (isLight) flags or light else flags and light.inv()
+        w.decorView.systemUiVisibility = flags
+    }
+
+    /** WCAG contrast ratio between two opaque colours. */
+    fun contrast(a: Int, b: Int): Double {
+        fun lum(c: Int): Double {
+            fun ch(v: Int): Double { val x = v / 255.0; return if (x <= 0.03928) x / 12.92 else Math.pow((x + 0.055) / 1.055, 2.4) }
+            return 0.2126 * ch((c shr 16) and 255) + 0.7152 * ch((c shr 8) and 255) + 0.0722 * ch(c and 255)
+        }
+        val l1 = lum(a); val l2 = lum(b)
+        return (maxOf(l1, l2) + 0.05) / (minOf(l1, l2) + 0.05)
     }
 }
 
@@ -135,7 +198,7 @@ class Ui(val ctx: Context) {
         Button(ctx).apply {
             text = label
             isAllCaps = false
-            setTextColor(if (primary) Color.BLACK else Pal.text)
+            setTextColor(if (primary) Pal.onAccent else Pal.text)
             background = rounded(if (primary) Pal.accent else Pal.surface2, 10)
             stateListAnimator = null
             minHeight = dp(44)
@@ -157,6 +220,37 @@ class Ui(val ctx: Context) {
             background = rounded(Pal.surface2, 10)
             setPadding(dp(12), dp(10), dp(12), dp(10))
             if (tag != null) this.tag = tag
+        }
+
+    /** Compact reading for dense tiles: small label, big value, thin bar. A null value reads "n/a". */
+    fun miniStat(label: String, pct: Double?, tag: String? = null): LinearLayout = vbox {
+        if (tag != null) this.tag = tag
+        addView(text(label.uppercase(), 9.5f, Pal.dim, bold = true))
+        addView(text(if (pct == null) "n/a" else "%.0f%%".format(pct), 17f, if (pct == null) Pal.dim else Pal.text))
+        addView(ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100; progress = (pct ?: 0.0).toInt().coerceIn(0, 100); isIndeterminate = false
+            progressTintList = ColorStateList.valueOf(barColor(pct))
+            progressBackgroundTintList = ColorStateList.valueOf(Pal.surface2)
+            alpha = if (pct == null) 0.35f else 1f
+        }, LinearLayout.LayoutParams(-1, dp(4)).apply { topMargin = dp(2) })
+    }
+
+    fun icon(res: Int, tint: Int, sizeDp: Int = 22): android.widget.ImageView = android.widget.ImageView(ctx).apply {
+        setImageResource(res)
+        imageTintList = ColorStateList.valueOf(tint)
+        layoutParams = LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp))
+    }
+
+    /** A small rounded selector chip (PC picker, filters). */
+    fun chip(label: String, selected: Boolean, tag: String? = null, onClick: () -> Unit): TextView =
+        text(label, 13f, if (selected) Pal.onAccent else Pal.text, bold = selected).apply {
+            background = rounded(if (selected) Pal.accent else Pal.surface2, 16)
+            gravity = Gravity.CENTER
+            maxLines = 1
+            setPadding(dp(14), dp(7), dp(14), dp(7))
+            isClickable = true
+            if (tag != null) this.tag = tag
+            setOnClickListener { onClick() }
         }
 
     fun dot(color: Int): View = View(ctx).apply {

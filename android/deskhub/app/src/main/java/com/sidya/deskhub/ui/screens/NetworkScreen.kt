@@ -17,7 +17,7 @@ class NetworkScreen(host: MainActivity) : Screen(host) {
     override fun render(s: DashState): View = ui.vbox {
         addView(ui.card("This phone", tag = "net_phone") {
             addView(ui.row("Network", phoneNetwork(host)))
-            addView(ui.row("Companion address", app.settings.companionAddress().ifEmpty { "not set" }))
+            addView(ui.row("Companion address", (app.pcs.active().endpoint().ifEmpty { "not set" })))
             addView(ui.row("Companion reachable", if (s.online) "yes" else "no", if (s.online) Pal.ok else Pal.bad))
             addView(ui.row("Round-trip latency", if (s.latencyMs >= 0) "${s.latencyMs} ms" else "-"))
             if (!s.online && s.error != null) addView(ui.text(s.error, 12f, Pal.dim))

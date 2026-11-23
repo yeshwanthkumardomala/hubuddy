@@ -9,6 +9,7 @@ import com.sidya.deskhub.auth.AuthManager
 import com.sidya.deskhub.core.EncryptedSecretStore
 import com.sidya.deskhub.core.KeystoreCipher
 import com.sidya.deskhub.core.MemorySecretStore
+import com.sidya.deskhub.core.PcRegistry
 import com.sidya.deskhub.core.PrefsKeyValue
 import com.sidya.deskhub.core.SecretCipher
 import com.sidya.deskhub.core.SecretStore
@@ -49,11 +50,13 @@ class DeskHubApp : Application() {
 
     val api by lazy { ApiClient({ settings.timeoutSec * 1000 }, { settings.timeoutSec * 1000 + 1000 }) }
 
-    val companion by lazy { CompanionLink(settings, secrets, api) }
+    val pcs by lazy { PcRegistry(kv, secrets) }
+
+    val companion by lazy { CompanionLink(pcs, api) }
 
     val repo by lazy {
         val main = Handler(Looper.getMainLooper())
-        DashboardRepository(settings, secrets, companion, api, cacheDir, SystemClock, Executor { main.post(it) })
+        DashboardRepository(settings, secrets, companion, api, cacheDir, SystemClock, Executor { main.post(it) }, pcs)
     }
 
     companion object {

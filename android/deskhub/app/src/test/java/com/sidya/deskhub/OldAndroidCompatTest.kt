@@ -35,7 +35,7 @@ class OldAndroidCompatTest {
 
         val m = Robolectric.buildActivity(MainActivity::class.java).setup().get()
         shadowOf(Looper.getMainLooper()).idle()
-        assertNotNull(m.window.decorView.findViewWithTag<TextView>("clock"))
+        assertNotNull(m.window.decorView.findViewWithTag<View>("card_pc"))
         for (tab in listOf("Monitor", "AI", "Controls", "Settings")) {
             m.window.decorView.findViewWithTag<View>("nav_$tab").performClick()
         }

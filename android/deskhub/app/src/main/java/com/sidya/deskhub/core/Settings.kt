@@ -1,24 +1,7 @@
 package com.sidya.deskhub.core
 
-import com.sidya.deskhub.net.AddressValidator
-
 /** User configuration (non-secret). Secrets live in [SecretStore]. */
 class Settings(private val kv: KeyValue) {
-    /** "usb" = adb reverse to 127.0.0.1; "wifi" = the PC's LAN address. */
-    var mode: String
-        get() = kv.getString("cfg.mode")?.takeIf { it == "usb" || it == "wifi" } ?: "usb"
-        set(v) = kv.putString("cfg.mode", if (v == "wifi") "wifi" else "usb")
-
-    var usbPort: Int
-        get() = kv.getInt("cfg.usbPort", AddressValidator.DEFAULT_PORT).coerceIn(1, 65535)
-        set(v) = kv.putInt("cfg.usbPort", v.coerceIn(1, 65535))
-
-    var wifiAddress: String
-        get() = kv.getString("cfg.wifiAddress") ?: ""
-        set(v) = kv.putString("cfg.wifiAddress", v.trim())
-
-    fun companionAddress(): String = if (mode == "usb") "127.0.0.1:$usbPort" else wifiAddress
-
     var refreshSec: Int
         get() = kv.getInt("cfg.refreshSec", 5).coerceIn(2, 300)
         set(v) = kv.putInt("cfg.refreshSec", v.coerceIn(2, 300))
@@ -27,10 +10,13 @@ class Settings(private val kv: KeyValue) {
         get() = kv.getInt("cfg.timeoutSec", 4).coerceIn(1, 30)
         set(v) = kv.putInt("cfg.timeoutSec", v.coerceIn(1, 30))
 
-    /** "charcoal" or "black" (pure black for OLED-like power saving). */
+    /** "dark" (charcoal), "black", "light" or "auto" (follow the phone). */
     var theme: String
-        get() = kv.getString("cfg.theme")?.takeIf { it == "black" } ?: "charcoal"
-        set(v) = kv.putString("cfg.theme", if (v == "black") "black" else "charcoal")
+        get() = when (val t = kv.getString("cfg.theme")) {
+            "black", "light", "auto", "dark" -> t
+            else -> "dark" // includes the old "charcoal"
+        }
+        set(v) = kv.putString("cfg.theme", if (v in listOf("dark", "black", "light", "auto")) v else "dark")
 
     /** Show the last saved dashboard when the companion is offline. */
     var showCachedOffline: Boolean
@@ -79,9 +65,9 @@ class Settings(private val kv: KeyValue) {
         get() = (kv.getString("desk.panels") ?: DESK_PANELS.joinToString(",")).split(',').map { it.trim() }.filter { it in DESK_PANELS }
         set(v) = kv.putString("desk.panels", v.filter { it in DESK_PANELS }.joinToString(","))
 
-    /** Keep the screen on in desk mode even when not charging (uses more battery). */
+    /** Start desk mode (and keep the screen on) even when not charging; stops itself at [LOW_BATTERY_PCT]. */
     var deskOnBattery: Boolean
-        get() = kv.getBoolean("desk.onBattery", false)
+        get() = kv.getBoolean("desk.onBattery", true)
         set(v) = kv.putBoolean("desk.onBattery", v)
 
     /** Night: dim clock only. Times are minutes after midnight. */
@@ -106,7 +92,9 @@ class Settings(private val kv: KeyValue) {
         set(v) = kv.putInt("ui.lastTab", v)
 }
 
-val DESK_PANELS = listOf("clock", "pc", "claude", "media", "calendar", "weather", "network", "github")
+const val LOW_BATTERY_PCT = 15
+
+val DESK_PANELS = listOf("clock", "fleet", "pc", "claude", "media", "calendar", "weather", "network", "github")
 
 data class LocalShortcut(val label: String, val target: String) {
     val isApp get() = target.startsWith("app:")

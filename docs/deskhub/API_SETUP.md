@@ -75,6 +75,22 @@ The app accepts only loopback, private (10/8, 172.16/12, 192.168/16), link-local
 addresses. Plain HTTP on Wi-Fi is **not encrypted**, so use a network you trust. Never forward
 port 8765 on your router.
 
+## 3b. Connecting several PCs and laptops (up to 8)
+
+Each computer runs its own bridge (section 2) and is paired once:
+
+1. On every computer: set up the DeskHub companion and start the bridge with `-Lan` (Wi-Fi). Only one
+   computer can use USB (`adb reverse` maps the phone to the one cable); use Wi-Fi for the rest.
+2. In the app: **Settings → PCs and laptops → + Add PC**. Give it a name, choose *Local Wi-Fi*, enter that
+   computer's IP and port (for example `192.168.1.101:8765`), *Save*, *Test connection*, then enter the
+   pairing code its bridge printed and tap *Pair*. Repeat for each computer.
+3. See everything together on **Monitor → All PCs**, or pick one computer with the chips at the top (that
+   computer then also drives Home, AI and Controls). Home shows a one-line summary per PC, and desk mode
+   has an **All PCs** page.
+
+A PC named "My PC" or "PC 2" takes the computer name it reports once it connects. Offline PCs show their
+last readings dimmed with "last seen". Remove a PC with *Remove PC* in its settings.
+
 ## 4. Optional integrations
 
 | Feature | Where to configure |

@@ -134,11 +134,12 @@ class UiFlowTest {
         return launch(MainActivity::class.java)
     }
 
-    @Test fun dashboardOpensOfflineWithClockAndClearStates() {
+    @Test fun dashboardOpensOfflineWithoutBigClockAndWithClearStates() {
         val m = loggedInMain()
         shadowOf(Looper.getMainLooper()).idle()
-        val clock = m.byTag<TextView>("clock")!!
-        assertTrue(clock.text.matches(Regex("\\d{2}:\\d{2}:\\d{2}")))
+        // The clock lives in desk mode only; the everyday dashboard is all dashboard.
+        assertNull(m.byTag<View>("clock"))
+        assertNotNull(m.byTag<View>("card_pc"))
         // Not paired: a banner says so and no fake numbers are shown.
         waitFor { m.byTag<View>("banner") != null }
         assertTrue(m.byTag<TextView>("statusText")!!.text.contains("Not paired"))
@@ -149,7 +150,7 @@ class UiFlowTest {
     @Test fun bottomNavigationOpensAllFiveTabs() {
         val m = loggedInMain()
         for ((tab, marker) in listOf("Monitor" to "pc_status", "AI" to "ai_empty", "Controls" to "media",
-            "Settings" to "connStatus", "Home" to "clock")) {
+            "Settings" to "connStatus", "Home" to "card_pc")) {
             m.byTag<View>("nav_$tab")!!.performClick()
             shadowOf(Looper.getMainLooper()).idle()
             assertNotNull("tab $tab shows $marker", m.byTag<View>(marker))
@@ -163,7 +164,7 @@ class UiFlowTest {
         m.byTag<View>("card_cal")!!.performClick()
         assertNotNull(m.byTag<View>("cal_empty"))
         m.byTag<View>("back")!!.performClick()
-        assertNotNull(m.byTag<View>("clock"))
+        assertNotNull(m.byTag<View>("card_pc"))
         m.byTag<View>("card_weather")!!.performClick()
         assertNotNull(m.byTag<View>("weather_now"))
         m.onBackPressed()
@@ -179,17 +180,17 @@ class UiFlowTest {
         m.byTag<EditText>("wifiAddress")!!.setText("8.8.8.8:8765")
         m.byTag<View>("saveConn")!!.performClick()
         assertTrue(m.byTag<TextView>("connMessage")!!.text.contains("Only local addresses"))
-        assertEquals("usb", app().settings.mode)
+        assertEquals("usb", app().pcs.active().mode)
 
         m.byTag<EditText>("wifiAddress")!!.setText("192.168.1.100:8765")
         m.byTag<View>("saveConn")!!.performClick()
-        assertEquals("wifi", app().settings.mode)
-        assertEquals("192.168.1.100:8765", app().settings.companionAddress())
+        assertEquals("wifi", app().pcs.active().mode)
+        assertEquals("192.168.1.100:8765", app().pcs.active().endpoint())
     }
 
     @Test fun connectionTestToDeadCompanionShowsErrorWithoutCrash() {
         val m = loggedInMain()
-        app().settings.usbPort = java.net.ServerSocket(0).use { it.localPort }
+        app().pcs.update(app().pcs.active().copy(mode = "usb", usbPort = java.net.ServerSocket(0).use { it.localPort }))
         m.byTag<View>("nav_Settings")!!.performClick()
         m.byTag<View>("testConn")!!.performClick()
         waitFor(8000) { m.byTag<TextView>("connMessage")!!.text.contains("unreachable") }
@@ -218,8 +219,7 @@ class UiFlowTest {
             else if (req.path == "/api/snapshot") 200 to snapshot else 200 to """{"ok":true}"""
         }.start()
         try {
-            app().settings.usbPort = server.port
-            app().secrets.put(com.sidya.deskhub.net.CompanionLink.TOKEN, "k".repeat(43))
+            app().pairActivePc(server.port)
             block(loggedInMain())
         } finally { server.stop() }
     }

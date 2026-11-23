@@ -1,4 +1,4 @@
-# Test report — Hubuddy DeskHub 1.2.0
+# Test report — Hubuddy DeskHub 1.3.0
 
 Date: 2026-11-23 · Environment: Linux build container (cloud), OpenJDK 21, Gradle 8.14.3,
 AGP 8.7.3, Kotlin 2.0.21, Android SDK Platform 34 / Build-Tools 34, Robolectric 4.14.1, Python 3.13.
@@ -14,7 +14,8 @@ AGP 8.7.3, Kotlin 2.0.21, Android SDK Platform 34 / Build-Tools 34, Robolectric 
 | Suite | Result |
 | --- | --- |
 | Compilation (`assembleDebug`, `assembleRelease`) | ✅ BUILD SUCCESSFUL |
-| Android unit + Robolectric UI tests (`testDebugUnitTest`) | ✅ **147 run, 0 failed, 0 skipped** (includes 7 screenshot runs and 34 desk-mode runs) |
+| Android unit + Robolectric UI tests (`testDebugUnitTest`) | ✅ **174 run, 0 failed, 0 skipped** (includes 12 screenshot renders) |
+| Contrast of every colour pair in Dark, Black and Light | ✅ `PaletteTest`: text 7:1, secondary text and button labels 4.5:1, accent and status colours 3:1 |
 | Android version coverage (UI tests) | ✅ API 21 (13 tests), 22 (1), 24, 26, 28, 30, 34 (12 each): all passed |
 | Android Lint (`lintDebug`, includes manifest checks) | ✅ 0 errors; `NewApi` clean for minSdk 21. 2 expected warnings: `InsecureBaseConfiguration` (cleartext HTTP to the LAN companion, by design and restricted in code) and `UnusedAttribute` (`networkSecurityConfig` is ignored below Android 7, which allows that traffic anyway) |
 | APK inspection (`aapt2 dump badging`) | ✅ package `com.sidya.deskhub`, minSdk **21**, targetSdk 34, permissions INTERNET + ACCESS_NETWORK_STATE only, no native code |
@@ -88,6 +89,22 @@ the configured seconds · a Claude permission alert jumps to the Claude page · 
 clock only at minimum brightness · touch leaves and keeps a valid session · an expired session
 needs the PIN again · malformed data never crashes it · night hours wrap midnight, settings clamp.
 Not covered: real screen-off behaviour, real battery and charger events, and how it looks on a real phone.
+
+## 1.3.0 tests (multi-PC, themes, layout)
+
+* **PcRegistryTest (4):** up to 8 PCs, limit enforced · separate token per PC, removed with it, last PC
+  cannot be removed · persistence and name limits · migration of the single-PC setup of earlier versions.
+* **MultiPcUiTest (6, Android 9):** three PCs polled together (two online, one dead) and shown as tiles ·
+  tapping a tile selects that PC · an offline PC does not block the others · adding, editing, duplicate
+  name refusal and removing PCs in Settings · switching to Light and back · landscape shows the rail and 2
+  columns, portrait shows the bottom bar and 1 column.
+* **DeskModeTest (+3):** starts on battery by default but not at 12% · stops itself when the battery drops
+  to 10% · the All PCs page appears only with several PCs.
+* **PaletteTest (2), SettingsTest (+1):** colour contrast, theme persistence, old "charcoal" mapped to Dark.
+* The Home screen test now asserts there is no big clock.
+
+Layout was also checked by eye in rendered screenshots (portrait and landscape, dark and light, 4 PCs),
+which led to the compact PC tiles and the two-column settings page.
 
 ## Not run / pending
 

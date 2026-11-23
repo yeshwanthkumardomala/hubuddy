@@ -3,6 +3,7 @@ package com.sidya.deskhub
 import com.sidya.deskhub.core.Clock
 import com.sidya.deskhub.core.MemoryKeyValue
 import com.sidya.deskhub.core.MemorySecretStore
+import com.sidya.deskhub.core.PcRegistry
 import com.sidya.deskhub.core.Settings
 import com.sidya.deskhub.data.DashState
 import com.sidya.deskhub.data.DashboardRepository
@@ -34,6 +35,7 @@ class DashboardRepositoryTest {
     private val kv = MemoryKeyValue()
     private val secrets = MemorySecretStore()
     private val settings = Settings(kv)
+    private val registry = PcRegistry(kv, secrets)
     private lateinit var cache: File
     private val direct = Executor { it.run() }
 
@@ -56,14 +58,14 @@ class DashboardRepositoryTest {
             }
         }.start()
         port = server.port
-        settings.mode = "usb"; settings.usbPort = port; settings.timeoutSec = 1; settings.refreshSec = 2
+        registry.update(registry.active().copy(mode = "usb", usbPort = port)); settings.timeoutSec = 1; settings.refreshSec = 2
     }
 
     @After fun tearDown() { server.stop(); cache.deleteRecursively() }
 
     private fun api() = ApiClient({ settings.timeoutSec * 1000 }, { settings.timeoutSec * 1000 })
-    private fun link() = CompanionLink(settings, secrets, api())
-    private fun repo() = DashboardRepository(settings, secrets, link(), api(), cache, Clock { System.currentTimeMillis() }, direct)
+    private fun link() = CompanionLink(registry, api())
+    private fun repo() = DashboardRepository(settings, secrets, link(), api(), cache, Clock { System.currentTimeMillis() }, direct, registry)
 
     private fun awaitState(r: DashboardRepository, timeoutMs: Long = 8000, cond: (DashState) -> Boolean): DashState {
         val end = System.currentTimeMillis() + timeoutMs
@@ -86,7 +88,7 @@ class DashboardRepositoryTest {
         assertFalse(l.paired)
         assertTrue(l.pair("42-42-42", "test") is ApiResult.Ok)
         assertTrue(l.paired)
-        assertEquals(token, secrets.get(CompanionLink.TOKEN))
+        assertEquals(token, registry.token("pc1"))
         assertEquals(ErrKind.BAD_ADDRESS, (l.pair("12", "x") as ApiResult.Err).kind)
     }
 
@@ -98,7 +100,7 @@ class DashboardRepositoryTest {
     }
 
     @Test fun dashboardLoadsAndIsCachedForOffline() {
-        secrets.put(CompanionLink.TOKEN, token)
+        registry.setToken("pc1", token)
         val r = repo(); r.start()
         val s = awaitState(r) { it.online }
         assertEquals(42.0, s.section("stats")!!.getDouble("cpu"), 0.0)
@@ -117,14 +119,14 @@ class DashboardRepositoryTest {
     }
 
     @Test fun timeoutIsReportedNotThrown() {
-        secrets.put(CompanionLink.TOKEN, token)
+        registry.setToken("pc1", token)
         delayMs = 2500
         val r = link().get("/api/snapshot")
         assertEquals(ErrKind.TIMEOUT, (r as ApiResult.Err).kind)
     }
 
     @Test fun reconnectsAfterOutage() {
-        secrets.put(CompanionLink.TOKEN, token)
+        registry.setToken("pc1", token)
         up = false
         val r = repo(); r.start()
         val down = awaitState(r) { it.failures >= 1 }
@@ -137,27 +139,26 @@ class DashboardRepositoryTest {
     }
 
     @Test fun badTokenIsUnauthorized() {
-        secrets.put(CompanionLink.TOKEN, "wrong-token-wrong-token-wrong")
+        registry.setToken("pc1", "wrong-token-wrong-token-wrong")
         assertEquals(ErrKind.UNAUTHORIZED, (link().get("/api/snapshot") as ApiResult.Err).kind)
     }
 
     @Test fun invalidOrPublicAddressRejectedBeforeAnyRequest() {
-        secrets.put(CompanionLink.TOKEN, token)
-        settings.mode = "wifi"
-        settings.wifiAddress = "8.8.8.8:8765"
+        registry.setToken("pc1", token)
+        registry.update(registry.active().copy(mode = "wifi", address = "8.8.8.8:8765"))
         assertEquals(ErrKind.BAD_ADDRESS, (link().get("/api/snapshot") as ApiResult.Err).kind)
-        settings.wifiAddress = "not an address"
+        registry.update(registry.active().copy(address = "not an address"))
         assertEquals(ErrKind.BAD_ADDRESS, (link().ping() as ApiResult.Err).kind)
     }
 
     @Test fun nothingListeningIsUnreachable() {
         val free = ServerSocket(0).use { it.localPort }
-        settings.usbPort = free
+        registry.update(registry.active().copy(usbPort = free))
         assertEquals(ErrKind.UNREACHABLE, (link().ping() as ApiResult.Err).kind)
     }
 
     @Test fun commandsArePostedWithToken() {
-        secrets.put(CompanionLink.TOKEN, token)
+        registry.setToken("pc1", token)
         assertTrue(link().post("/api/media", JSONObject().put("cmd", "toggle")) is ApiResult.Ok)
     }
 
@@ -169,7 +170,7 @@ class DashboardRepositoryTest {
     }
 
     @Test fun clearCacheRemovesSavedDashboard() {
-        secrets.put(CompanionLink.TOKEN, token)
+        registry.setToken("pc1", token)
         val r = repo(); r.start(); awaitState(r) { it.online }; r.stop()
         r.clearCache()
         assertNull(repo().state.snapshot)

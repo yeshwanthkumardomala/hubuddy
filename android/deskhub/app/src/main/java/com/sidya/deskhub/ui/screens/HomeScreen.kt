@@ -1,42 +1,27 @@
 package com.sidya.deskhub.ui.screens
 
-import android.view.Gravity
 import android.view.View
-import android.widget.TextView
 import com.sidya.deskhub.data.DashState
 import com.sidya.deskhub.ui.Fmt
 import com.sidya.deskhub.ui.MainActivity
 import com.sidya.deskhub.ui.Pal
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
+/**
+ * The everyday dashboard. There is deliberately no big clock here: the phone already shows the
+ * time, and the clock has its own page in desk mode, which starts when the phone is left idle.
+ */
 class HomeScreen(host: MainActivity) : Screen(host) {
-    private var clock: TextView? = null
-    private var date: TextView? = null
-    private val timeFmt = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-    private val dateFmt = SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault())
-
-    override fun tick() {
-        val now = Date()
-        clock?.text = timeFmt.format(now)
-        date?.text = dateFmt.format(now)
-    }
-
     override fun render(s: DashState): View = ui.vbox {
-        val now = Date()
-        // The clock and date are local: they work with no PC and no internet.
-        addView(ui.vbox {
-            gravity = Gravity.CENTER_HORIZONTAL
-            clock = ui.mono(timeFmt.format(now), 44f).apply { tag = "clock"; gravity = Gravity.CENTER }
-            date = ui.text(dateFmt.format(now), 14f, Pal.dim, tag = "date").apply { gravity = Gravity.CENTER }
-            addView(clock); addView(date)
-        }, ui.lp(bottom = 10))
         banner(s)?.let { addView(it) }
-
         val cards = ArrayList<View>()
+        if (s.pcs.size > 1) {
+            cards += ui.card("All PCs · ${s.onlineCount}/${s.pcs.size} online", tag = "card_fleet", onClick = { host.monitorSel = "all"; host.openTab(1) }) {
+                FleetScreen.rows(host, ui, s, this)
+            }
+        }
         val stats = section(s, "stats")
-        cards += ui.card("PC", tag = "card_pc", onClick = { host.openTab(1) }) {
+        val pcName = if (s.pcs.size > 1) s.activePc?.pc?.name else null
+        cards += ui.card(if (pcName != null) "PC · $pcName" else "PC", tag = "card_pc", onClick = { host.openTab(1) }) {
             val pc = section(s, "pc")
             addView(ui.row("Status", when {
                 s.online && pc?.optBoolean("asleep") == true -> "Online (display asleep)"

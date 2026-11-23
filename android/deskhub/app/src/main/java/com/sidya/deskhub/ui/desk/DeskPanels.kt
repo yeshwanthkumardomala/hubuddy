@@ -40,7 +40,7 @@ abstract class DeskPanel(val id: String, val title: String) {
     }
 
     companion object {
-        fun all(): List<DeskPanel> = listOf(ClockPanel(), PcPanel(), ClaudePanel(), MediaPanel(), CalendarPanel(),
+        fun all(): List<DeskPanel> = listOf(ClockPanel(), FleetPanel(), PcPanel(), ClaudePanel(), MediaPanel(), CalendarPanel(),
             WeatherPanel(), NetworkPanel(), GitHubPanel())
     }
 }
@@ -343,6 +343,55 @@ class GitHubPanel : DeskPanel("github", "GitHub") {
                 })
                 addView(ui.text("Last push " + repo.optString("pushed_at").replace('T', ' ').removeSuffix("Z"), 12f, Pal.dim))
             }, ui.lp(top = if (c != null) 4 else 0))
+        }
+    }
+}
+
+/** Every PC and laptop on one page (up to 8): a card each with CPU, RAM and GPU or disk. */
+class FleetPanel : DeskPanel("fleet", "All PCs") {
+    override fun available(s: DashState, d: DeskActivity) = s.pcs.size > 1
+
+    override fun build(s: DashState, d: DeskActivity): View {
+        val ui = d.ui
+        val cols = if (s.pcs.size <= 3) s.pcs.size else 4
+        val rows = s.pcs.chunked(cols)
+        return ui.vbox {
+            addView(ui.text("${s.onlineCount} of ${s.pcs.size} online".uppercase(), 11f, Pal.dim, bold = true), ui.lp(bottom = 6))
+            rows.forEach { row ->
+                addView(ui.hbox {
+                    gravity = Gravity.TOP
+                    row.forEach { p -> addView(card(p, d), ui.lp(0, -2, 1f).apply { setMargins(ui.dp(3), ui.dp(3), ui.dp(3), ui.dp(3)) }) }
+                    repeat(cols - row.size) { addView(View(d), ui.lp(0, 1, 1f)) }
+                }, ui.lp(-1, 0, 1f).apply { height = -2 })
+            }
+        }
+    }
+
+    private fun card(p: com.sidya.deskhub.data.PcLive, d: DeskActivity): View {
+        val ui = d.ui
+        val show = p.online || d.app.settings.showCachedOffline
+        val st = if (show) p.section("stats") else null
+        val color = when { !p.paired -> Pal.warn; p.online -> Pal.ok; else -> Pal.bad }
+        return ui.vbox(10) {
+            tag = "desk_pc_${p.pc.id}"
+            background = ui.rounded(Pal.surface, 14, Pal.walnutDim)
+            addView(ui.hbox {
+                addView(ui.dot(color))
+                addView(ui.text(p.pc.name, 14f, bold = true).apply { maxLines = 1 }, ui.lp(0, -2, 1f))
+            })
+            addView(ui.text(when { !p.paired -> "Not paired"; p.online -> "Online"; p.snapshot != null && show -> "Offline · ${Fmt.ago(p.snapshotAt)}"; else -> "Offline" }, 11f, if (p.online) Pal.dim else color), ui.lp(bottom = 6))
+            if (st == null) { addView(ui.text("No readings", 12f, Pal.dim)); return@vbox }
+            fun num(k: String) = if (st.has(k) && !st.isNull(k)) st.optDouble(k).takeIf { !it.isNaN() } else null
+            val used = num("ram_used"); val total = num("ram_total")
+            addView(ui.hbox {
+                alpha = if (p.online) 1f else 0.6f
+                gravity = Gravity.TOP
+                listOf("CPU" to num("cpu"), "RAM" to (if (used != null && total != null && total > 0) used / total * 100 else null),
+                    (if (num("gpu") != null) "GPU" else "Disk") to (num("gpu") ?: num("disk"))).forEachIndexed { i, (l, v) ->
+                    addView(ui.miniStat(l, v), ui.lp(0, -2, 1f).apply { if (i > 0) leftMargin = ui.dp(8) })
+                }
+            })
+            p.section("alert")?.takeIf { !it.optBoolean("clear") && it.has("kind") }?.let { addView(ui.text("Claude waiting", 11f, Pal.warn, bold = true)) }
         }
     }
 }

@@ -16,6 +16,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.sidya.deskhub.DeskHubApp
+import com.sidya.deskhub.R
 import com.sidya.deskhub.data.DashState
 import com.sidya.deskhub.ui.desk.DeskActivity
 import com.sidya.deskhub.ui.screens.AiScreen
@@ -26,8 +27,9 @@ import com.sidya.deskhub.ui.screens.Screen
 import com.sidya.deskhub.ui.screens.SettingsScreen
 
 /**
- * Single activity holding the five tabs. Screens are plain view builders, re-rendered
- * from the latest [DashState]; polling runs only while this activity is resumed.
+ * Single activity with five tabs. Portrait: header + bottom bar. Landscape / wide screens: a
+ * navigation rail on the left, so the whole height is for content. Screens are plain view
+ * builders re-rendered from the latest [DashState]; polling runs only while this is resumed.
  */
 class MainActivity : Activity() {
     val app by lazy { DeskHubApp.of(this) }
@@ -35,17 +37,30 @@ class MainActivity : Activity() {
         private set
     private lateinit var scroll: ScrollView
     private lateinit var navBar: LinearLayout
+    private lateinit var statusChip: LinearLayout
     private lateinit var statusDot: View
     private lateinit var statusText: TextView
+    private lateinit var pageTitle: TextView
     private val handler = Handler(Looper.getMainLooper())
     private val stack = ArrayList<Screen>()
     private var tab = 0
     private var resumed = false
+    private var builtWithTheme = ""
+    private var builtLandscape = false
     /** Last time the user touched the screen; desk mode starts after the configured idle time. */
     var lastTouchAt = System.currentTimeMillis()
     private val listener: (DashState) -> Unit = { onState(it) }
 
+    /** Monitor tab selection: "all" or a PC id ("" = automatic). Kept while the activity lives. */
+    var monitorSel = ""
+    /** PC being edited in Settings ("" / null = the selected PC). */
+    var editPcId: String? = null
+    var pendingEditPc: String?
+        get() = editPcId
+        set(v) { editPcId = v }
+
     val tabNames = listOf("Home", "Monitor", "AI", "Controls", "Settings")
+    private val tabIcons = listOf(R.drawable.ic_home, R.drawable.ic_monitor, R.drawable.ic_ai, R.drawable.ic_controls, R.drawable.ic_settings)
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -58,9 +73,22 @@ class MainActivity : Activity() {
         }
     }
 
+    /** Landscape or a wide window: rail navigation and multi-column content. */
+    val isLandscape: Boolean get() = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    /** Width of the content area in dp (screen minus the rail in landscape). */
+    val contentWidthDp: Int get() = resources.configuration.screenWidthDp - (if (isLandscape) RAIL_DP else 0)
+
+    /** Number of card columns for the content width: 1 (phone portrait), 2, or 3 (large landscape). */
+    val columnCount: Int get() = when {
+        contentWidthDp >= 900 -> 3
+        contentWidthDp >= 520 -> 2
+        else -> 1
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Pal.apply(app.settings.theme)
+        applyPalette()
         ui = Ui(this)
         if (!app.auth.canAccessDashboard()) { toLogin(null); return }
         tab = savedInstanceState?.getInt("tab") ?: app.settings.lastTab
@@ -68,49 +96,111 @@ class MainActivity : Activity() {
         openTab(tab)
     }
 
-    private fun buildChrome() {
-        val root = ui.vbox {
-            setBackgroundColor(Pal.bg)
-            // Header: brand + connection indicator.
-            addView(ui.hbox {
-                setPadding(ui.dp(14), ui.dp(10), ui.dp(14), ui.dp(8))
-                addView(ui.vbox {
-                    addView(ui.text("Hubuddy DeskHub", 16f, Pal.text, bold = true))
-                    addView(ui.text("SIDYA EDITION", 9f, Pal.walnut, bold = true).apply { letterSpacing = 0.2f })
-                }, ui.lp(0, -2, 1f))
-                addView(ui.text("Desk", 12f, Pal.accent, bold = true, tag = "deskButton").apply {
-                    background = ui.rounded(Pal.surface2, 10)
-                    setPadding(ui.dp(12), ui.dp(6), ui.dp(12), ui.dp(6))
-                    isClickable = true
-                    setOnClickListener { openDesk() }
-                }, ui.lp(-2, -2).apply { rightMargin = ui.dp(10) })
-                statusDot = ui.dot(Pal.dim)
-                addView(statusDot)
-                statusText = ui.text("…", 12f, Pal.dim, tag = "statusText")
-                addView(statusText)
-            })
-            scroll = ScrollView(this@MainActivity).apply {
-                isFillViewport = true
-                setBackgroundColor(Pal.bg)
-                tag = "content"
-            }
-            addView(FrameLayout(this@MainActivity).apply { addView(scroll) }, ui.lp(-1, 0, 1f))
-            navBar = ui.hbox {
-                setBackgroundColor(Pal.surface)
-                setPadding(0, ui.dp(2), 0, ui.dp(2))
-            }
-            addView(navBar, ui.lp(-1, ui.dp(52)))
-        }
-        tabNames.forEachIndexed { i, name ->
-            navBar.addView(ui.text(name, 12f, Pal.dim, tag = "nav_$name").apply {
-                gravity = Gravity.CENTER
-                isClickable = true
-                setOnClickListener { openTab(i) }
-            }, ui.lp(0, -1, 1f))
-        }
-        setContentView(root)
+    private fun applyPalette() {
+        builtWithTheme = Pal.apply(app.settings.theme, this)
+        Pal.styleWindow(this)
     }
 
+    // ---- frame ---------------------------------------------------------------
+    private fun buildChrome() {
+        builtLandscape = isLandscape
+        val land = builtLandscape
+        scroll = ScrollView(this).apply { isFillViewport = true; setBackgroundColor(Pal.bg); tag = "content" }
+        pageTitle = ui.text("", 18f, Pal.text, bold = true, tag = "pageTitle")
+        statusDot = ui.dot(Pal.dim)
+        statusText = ui.text("…", 12f, Pal.dim, tag = "statusText")
+        statusChip = ui.hbox {
+            tag = "statusChip"
+            background = ui.rounded(Pal.surface, 14)
+            setPadding(ui.dp(10), ui.dp(6), ui.dp(12), ui.dp(6))
+            isClickable = true
+            addView(statusDot); addView(statusText)
+            setOnClickListener { showPcPicker() }
+        }
+        navBar = ui.vbox()
+        val root: View = if (land) landscapeFrame() else portraitFrame()
+        root.setBackgroundColor(Pal.bg)
+        setContentView(root)
+        rebuildNavItems()
+    }
+
+    private fun portraitFrame(): View = ui.vbox {
+        addView(ui.hbox {
+            setPadding(ui.dp(16), ui.dp(10), ui.dp(12), ui.dp(8))
+            addView(ui.vbox {
+                addView(ui.text("Hubuddy DeskHub", 16f, Pal.text, bold = true))
+                addView(ui.text("SIDYA EDITION", 9f, Pal.walnut, bold = true).apply { letterSpacing = 0.2f })
+            }, ui.lp(0, -2, 1f))
+            addView(deskButton(), ui.lp(-2, -2).apply { rightMargin = ui.dp(8) })
+            addView(statusChip)
+        })
+        addView(scroll, ui.lp(-1, 0, 1f))
+        navBar.orientation = LinearLayout.HORIZONTAL
+        navBar.setBackgroundColor(Pal.surface)
+        navBar.setPadding(ui.dp(4), ui.dp(4), ui.dp(4), ui.dp(4))
+        addView(navBar, ui.lp(-1, ui.dp(60)))
+    }
+
+    private fun landscapeFrame(): View = ui.hbox {
+        gravity = Gravity.TOP
+        navBar.orientation = LinearLayout.VERTICAL
+        navBar.background = null
+        navBar.setPadding(ui.dp(6), ui.dp(4), ui.dp(6), ui.dp(4))
+        addView(ui.vbox {
+            tag = "rail"
+            setBackgroundColor(Pal.surface)
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, ui.dp(10), 0, ui.dp(8))
+            addView(ui.text("Hubuddy", 12f, Pal.text, bold = true).apply { gravity = Gravity.CENTER })
+            addView(ui.text("SIDYA", 8f, Pal.walnut, bold = true).apply { gravity = Gravity.CENTER; letterSpacing = 0.2f }, ui.lp(bottom = 8))
+            addView(navBar, ui.lp(-1, 0, 1f))
+            addView(deskButton(), ui.lp(-2, -2).apply { bottomMargin = ui.dp(4) })
+        }, LinearLayout.LayoutParams(ui.dp(RAIL_DP), -1))
+        addView(ui.vbox {
+            addView(ui.hbox {
+                setPadding(ui.dp(16), ui.dp(8), ui.dp(12), ui.dp(4))
+                addView(pageTitle, ui.lp(0, -2, 1f))
+                addView(statusChip)
+            })
+            addView(scroll, ui.lp(-1, 0, 1f))
+        }, LinearLayout.LayoutParams(0, -1, 1f))
+    }
+
+    /** Starts desk mode. Icon-only in the narrow portrait header; icon and label in the landscape rail. */
+    private fun deskButton(): View = ui.hbox {
+        tag = "deskButton"
+        gravity = Gravity.CENTER
+        background = ui.rounded(Pal.surface2, 14)
+        val land = isLandscape
+        setPadding(ui.dp(if (land) 10 else 9), ui.dp(6), ui.dp(if (land) 12 else 9), ui.dp(6))
+        isClickable = true
+        contentDescription = "Start desk mode"
+        addView(ui.icon(R.drawable.ic_desk, Pal.accent, if (land) 16 else 20), ui.lp(ui.dp(if (land) 16 else 20), ui.dp(if (land) 16 else 20)).apply { if (land) rightMargin = ui.dp(6) })
+        if (land) addView(ui.text("Desk", 12f, Pal.accent, bold = true))
+        setOnClickListener { openDesk() }
+    }
+
+    private fun rebuildNavItems() {
+        navBar.removeAllViews()
+        val land = builtLandscape
+        tabNames.forEachIndexed { i, name ->
+            val sel = i == tab
+            val tint = if (sel) Pal.accent else Pal.dim
+            val item = ui.vbox {
+                tag = "nav_$name"
+                gravity = Gravity.CENTER
+                isClickable = true
+                contentDescription = name
+                background = if (sel) ui.rounded(Pal.surface2, 12) else null
+                setOnClickListener { openTab(i) }
+                addView(ui.icon(tabIcons[i], tint, 22))
+                addView(ui.text(name, 10.5f, tint, bold = sel).apply { gravity = Gravity.CENTER; tag = "navLabel_$name" })
+            }
+            navBar.addView(item, if (land) ui.lp(-1, 0, 1f).apply { bottomMargin = ui.dp(4) } else ui.lp(0, -1, 1f).apply { leftMargin = ui.dp(2); rightMargin = ui.dp(2) })
+        }
+    }
+
+    // ---- navigation -------------------------------------------------------------
     fun openTab(i: Int) {
         tab = i.coerceIn(0, 4)
         app.settings.lastTab = tab
@@ -122,12 +212,7 @@ class MainActivity : Activity() {
             3 -> ControlsScreen(this)
             else -> SettingsScreen(this)
         })
-        for (c in 0 until navBar.childCount) {
-            val v = navBar.getChildAt(c) as TextView
-            val sel = c == tab
-            v.setTextColor(if (sel) Pal.accent else Pal.dim)
-            v.background = if (sel) ui.rounded(Pal.surface2, 10) else null
-        }
+        rebuildNavItems()
         render(resetScroll = true)
     }
 
@@ -140,7 +225,9 @@ class MainActivity : Activity() {
         val s = current() ?: return
         val y = scroll.scrollY
         scroll.removeAllViews()
-        val page = ui.vbox(12)
+        pageTitle.text = if (stack.size > 1) s.title ?: tabNames[tab] else tabNames[tab]
+        val pad = if (isLandscape) 10 else 12
+        val page = ui.vbox(pad)
         if (stack.size > 1) page.addView(ui.text("‹  Back", 14f, Pal.accent, tag = "back").apply {
             setPadding(0, 0, 0, ui.dp(10)); isClickable = true; setOnClickListener { onBackPressed() }
         })
@@ -156,28 +243,48 @@ class MainActivity : Activity() {
 
     private fun onState(s: DashState) {
         if (!::statusText.isInitialized) return
+        val name = s.activePc?.pc?.name
+        val many = s.pcs.size > 1
         val (color, label) = when {
             !s.paired -> Pal.warn to "Not paired"
-            s.online -> Pal.ok to (if (s.latencyMs >= 0) "PC online · ${s.latencyMs} ms" else "PC online")
+            s.online -> Pal.ok to (if (many) "${s.onlineCount}/${s.pcs.size} PCs online" else (if (s.latencyMs >= 0) "PC online · ${s.latencyMs} ms" else "PC online"))
             s.connecting && s.failures == 0 -> Pal.dim to "Connecting…"
-            else -> Pal.bad to "PC offline"
+            else -> Pal.bad to (if (many) "${s.onlineCount}/${s.pcs.size} PCs online" else "PC offline")
         }
         statusText.text = label
         statusText.setTextColor(color)
         statusDot.background = ui.dot(color).background
+        statusChip.contentDescription = "${name ?: "PC"}: $label"
         val cur = current() ?: return
         if (cur.live) render() else cur.onState(s)
     }
 
     fun rerender() = render()
 
+    /** Pick which PC the Home, AI and Controls tabs show. */
+    fun showPcPicker() {
+        val pcs = app.repo.state.pcs
+        if (pcs.size < 2) { openTab(4); return }
+        val labels = pcs.map { p ->
+            val state = when {
+                !p.paired -> "not paired"
+                p.online -> "online"
+                p.connecting -> "connecting"
+                else -> "offline"
+            }
+            "${if (p.pc.id == app.repo.state.activeId) "● " else "   "}${p.pc.name} - $state"
+        }.toTypedArray()
+        dialog().setTitle("Show which PC?").setItems(labels) { _, i -> app.repo.selectPc(pcs[i].pc.id); render() }
+            .setNegativeButton("Cancel", null).show()
+    }
+
+    private fun dialog() = AlertDialog.Builder(this, if (Pal.isLight) R.style.Theme_DeskHub_DialogLight else R.style.Theme_DeskHub_Dialog)
+
     fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
 
     /** Confirmation for actions that run something on the PC. */
     fun confirm(title: String, message: String, yes: String = "Run", action: () -> Unit) {
-        AlertDialog.Builder(this)
-            .setTitle(title)
-            .setMessage(message)
+        dialog().setTitle(title).setMessage(message)
             .setPositiveButton(yes) { _, _ -> action() }
             .setNegativeButton("Cancel", null)
             .show()
@@ -195,16 +302,20 @@ class MainActivity : Activity() {
     }
 
     fun applyTheme() {
-        Pal.apply(app.settings.theme)
+        applyPalette()
         buildChrome()
-        openTab(tab)
+        rebuildNavItems()
+        render(resetScroll = false)
         onState(app.repo.state)
     }
 
+    // ---- lifecycle ----------------------------------------------------------------
     override fun onResume() {
         super.onResume()
         if (!app.auth.canAccessDashboard()) { toLogin(null); return }
         resumed = true
+        // Desk mode may have switched the palette (night = black): rebuild if it no longer matches.
+        if (Pal.resolve(app.settings.theme, this) != builtWithTheme || Pal.current != builtWithTheme) applyTheme() else Pal.styleWindow(this)
         lastTouchAt = System.currentTimeMillis()
         updateKeepAwake()
         app.repo.addListener(listener)
@@ -229,11 +340,11 @@ class MainActivity : Activity() {
         app.auth.touch()
     }
 
-    /** Idle long enough, and the screen can stay on (charging, or allowed on battery). */
+    /** Idle long enough, and the screen may stay on (charging, or allowed on battery with enough charge). */
     fun shouldStartDesk(now: Long): Boolean {
         val idleMin = app.settings.deskIdleMin
         if (idleMin <= 0) return false
-        if (!(DeskActivity.isCharging(this) || app.settings.deskOnBattery)) return false
+        if (!DeskActivity.mayStayOn(this, app.settings)) return false
         return now - lastTouchAt >= idleMin * 60_000L
     }
 
@@ -245,7 +356,7 @@ class MainActivity : Activity() {
     /** Keep the screen awake when asked to, or so the desk-mode idle timer can run out. */
     private fun updateKeepAwake() {
         val s = app.settings
-        val deskWaiting = s.deskIdleMin > 0 && (DeskActivity.isCharging(this) || s.deskOnBattery)
+        val deskWaiting = s.deskIdleMin > 0 && DeskActivity.mayStayOn(this, s)
         if (s.keepScreenOn || deskWaiting) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
@@ -261,13 +372,20 @@ class MainActivity : Activity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        if (::scroll.isInitialized) render()
+        if (!::scroll.isInitialized) return
+        // Rotation (or a system dark-mode change): rebuild the frame for the new shape and palette.
+        applyPalette()
+        buildChrome()
+        render(resetScroll = false)
+        onState(app.repo.state)
     }
-
-    val isLandscape: Boolean get() = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt("tab", tab)
+    }
+
+    companion object {
+        const val RAIL_DP = 84
     }
 }
