@@ -105,7 +105,7 @@ class RemoteApi(AgentCase):
         self.assertEqual(codes[0], 200)
 
     def test_unavailable_backend_is_501_not_a_crash(self):
-        agent = Agent()  # default backend: nothing works off Windows
+        agent = Agent(remote=remote.Backend())  # a platform that cannot do any of it (the real Windows backend can)
         self.addCleanup(agent.stop)
         p = agent.pair_by_qr()
         _, st = agent.local("GET", "/local/state")

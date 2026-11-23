@@ -47,7 +47,7 @@ Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Py
 * **Wake-on-LAN:** the magic packet bytes are identical in the PC code and the app (102 bytes, MAC repeated 16 times).
 * **App:** the Remote screen explains when it is off, shows the touchpad and sends typed text and keys when allowed (Android 5.0 to 14);
   the interop test also proves the 403 → allow → 501-on-Linux path against the real PC program.
-* **Not verified:** mouse and keyboard injection through Windows `SendInput` on a real desktop, audio volume, sleep/restart/shutdown,
+* **Not verified:** mouse and keyboard injection through Windows `SendInput` on a user's own desktop (a mouse move was accepted on the CI Windows runner), audio volume, sleep/restart/shutdown,
   Wake-on-LAN hardware, and how the touchpad feels on a phone.
 
 ## Real bugs found by testing
