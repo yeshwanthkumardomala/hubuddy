@@ -146,7 +146,7 @@ straight away.
 
 | Phone | Status |
 | --- | --- |
-| Android 5.0 and newer, any brand | Supported. Tested in simulation on Android 5.0, 5.1, 7.0, 8.0, 9, 11 and 14 |
+| Android 5.0 and newer, any brand | Supported. Tested in simulation on Android 5.0, 7.0, 8.0, 9, 11 and 14 |
 | Android 5.0 to 7.0 | Weather and GitHub cards may show "unavailable" on old certificate stores; PC data is unaffected (it uses its own pinned certificate) |
 | iPhone and other devices | No app |
 

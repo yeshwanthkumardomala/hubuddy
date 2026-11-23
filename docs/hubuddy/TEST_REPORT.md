@@ -4,7 +4,7 @@ Date: 2026-11-23. Environments: Linux build container (OpenJDK 21, Gradle 8.14, 
 Robolectric 4.14, Python 3.13) and **GitHub Actions on Windows Server 2025** (Python 3.12) for the PC program.
 
 > **Physical phone testing: PENDING.** No phone was attached and the container cannot run an emulator, so the Android
-> behaviour was tested with Robolectric on **Android 5.0, 5.1, 7.0, 8.0, 9, 11 and 14**, and the app's real network code was
+> behaviour was tested with Robolectric on **Android 5.0, 7.0, 8.0, 9, 11 and 14**, and the app's real network code was
 > run against the real PC program (interop test). The camera, USB tethering, the Keystore on a device and firewalls on a real
 > network were **not** exercised.
 
