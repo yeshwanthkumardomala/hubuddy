@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E0F11">
+<link rel="manifest" href="manifest.json">
+<title>Hubuddy</title>
+<style>
+  :root { --bg:#0E0F11; --card:#1A1C1F; --card2:#24272B; --walnut:#8A5A3B; --line:#5C3D29;
+          --accent:#2EC4B6; --text:#F2F3F5; --dim:#9AA0A6; --ok:#3DDC84; --warn:#F4B400; --bad:#EF5350; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, sans-serif; }
+  header { display:flex; align-items:center; padding:12px 16px; gap:8px; }
+  header b { font-size:16px; } header small { color:var(--walnut); letter-spacing:.2em; font-size:9px; font-weight:700; display:block; }
+  #status { margin-left:auto; font-size:12px; color:var(--dim); }
+  main { padding:0 16px 24px; display:grid; gap:10px; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .card h2 { margin:0 0 8px; font-size:11px; letter-spacing:.08em; color:var(--dim); border-left:3px solid var(--walnut); padding-left:8px; }
+  .row { display:flex; justify-content:space-between; padding:2px 0; } .row span:first-child { color:var(--dim); }
+  .bar { height:8px; background:var(--card2); border-radius:4px; overflow:hidden; margin:2px 0 6px; }
+  .bar i { display:block; height:100%; background:var(--accent); }
+  .muted { color:var(--dim); } .clock { font-size:40px; font-weight:300; text-align:center; }
+  input, button { font:inherit; border-radius:10px; border:0; padding:10px 12px; }
+  input { background:var(--card2); color:var(--text); width:100%; margin:6px 0; }
+  button { background:var(--accent); color:#000; cursor:pointer; } button.alt { background:var(--card2); color:var(--text); }
+  .btns { display:flex; gap:6px; } .btns button { flex:1; }
+</style>
+</head>
+<body>
+<header><div><b>Hubuddy</b><small>SIDYA EDITION</small></div><span id="status">…</span></header>
+<main id="app"></main>
+<script>
+"use strict";
+// Same authentication as the Android app: a one-time pairing code from the PC
+// console is exchanged for a device token. The token stays in this browser only.
+const KEY = "hubuddy.token";
+let token = localStorage.getItem(KEY);
+const $ = (h) => { const t = document.createElement("template"); t.innerHTML = h.trim(); return t.content.firstChild; };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const fmtTok = (n) => n >= 1e6 ? (n / 1e6).toFixed(1) + "M" : n >= 1e3 ? (n / 1e3).toFixed(1) + "k" : String(n);
+const pct = (v) => typeof v === "number" ? v : null;
+const meter = (label, v, extra="") => v == null
+  ? `<div class="row"><span>${label}</span><span class="muted">unavailable</span></div>`
+  : `<div class="row"><span>${label}</span><span>${Math.round(v)}% ${esc(extra)}</span></div><div class="bar"><i style="width:${Math.max(0, Math.min(100, v))}%"></i></div>`;
+
+async function api(path, body) {
+  const r = await fetch(path, { method: body ? "POST" : "GET", cache: "no-store",
+    headers: Object.assign({ "Content-Type": "application/json" }, token ? { Authorization: "Bearer " + token } : {}),
+    body: body ? JSON.stringify(body) : undefined });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(j.error || r.status), { status: r.status });
+  return j;
+}
+
+function pairView(msg) {
+  const app = document.getElementById("app");
+  app.replaceChildren($(`<div class="card"><h2>PAIR THIS BROWSER</h2>
+    <p class="muted">Start the agent with <code>--pair</code> and enter the 6-digit code it prints.</p>
+    <input id="code" inputmode="numeric" maxlength="6" placeholder="Pairing code">
+    <button id="pair">Pair</button><p id="pmsg" class="muted">${esc(msg || "")}</p></div>`));
+  document.getElementById("pair").onclick = async () => {
+    try {
+      const j = await api("/api/pair", { code: document.getElementById("code").value.trim(), device: "Web browser" });
+      token = j.token; localStorage.setItem(KEY, token); tick();
+    } catch (e) { document.getElementById("pmsg").textContent = "Pairing failed: " + e.message; }
+  };
+}
+
+function render(s) {
+  const st = s.stats, cl = s.claude, al = s.alert, md = s.media, net = s.network;
+  const ev = ((s.calendar || {}).events || []).find(e => (e.end || e.start) * 1000 > Date.now());
+  const ram = st && st.ram_total ? st.ram_used / st.ram_total * 100 : null;
+  const five = cl && cl.limits && cl.limits.five_hour;
+  const cards = [
+    `<div class="card"><div class="clock" id="clock"></div><div class="muted" style="text-align:center" id="date"></div></div>`,
+    `<div class="card"><h2>PC</h2>${st ? meter("CPU", pct(st.cpu)) + meter("RAM", ram, `${(st.ram_used||0).toFixed(1)}/${Math.round(st.ram_total||0)} GB`) + meter("Disk", pct(st.disk)) + meter("GPU", pct(st.gpu)) +
+       `<div class="row"><span>GPU temp</span><span>${st.gpu_temp != null ? st.gpu_temp + " °C" : "unavailable"}</span></div>` : `<p class="muted">No PC stats yet.</p>`}</div>`,
+    `<div class="card"><h2>CLAUDE CODE</h2>${!cl && !al ? `<p class="muted">Claude Code agent not connected.</p>` :
+       (al ? `<p style="color:var(--warn)">${al.kind === "permission" ? "Waiting for permission" : "Waiting for input"}: ${esc(al.title)}</p>` : "") +
+       (five ? meter("5-hour limit", pct(five.pct)) : "") +
+       (cl && cl.today ? `<div class="row"><span>Tokens today</span><span>${fmtTok(cl.today.tokens)}</span></div>` : "")}</div>`,
+    `<div class="card"><h2>NOW PLAYING</h2>${md && md.active ? `<b>${esc(md.title)}</b><div class="muted">${esc(md.artist)}</div>
+       <div class="btns" style="margin-top:8px"><button class="alt" data-m="prev">Prev</button><button data-m="toggle">${md.playing ? "Pause" : "Play"}</button><button class="alt" data-m="next">Next</button></div>`
+       : `<p class="muted">Nothing playing.</p>`}</div>`,
+    `<div class="card"><h2>NEXT EVENT</h2>${ev ? `<b>${esc(ev.title)}</b><div class="muted">${new Date(ev.start * 1000).toLocaleString()}</div>` : `<p class="muted">No upcoming events.</p>`}</div>`,
+    `<div class="card"><h2>INTERNET</h2>${net ? `<div class="row"><span>Status</span><span>${net.online ? "online" : "offline"}</span></div>
+       <div class="row"><span>Latency</span><span>${net.latency_ms ?? "-"} ms</span></div>` : `<p class="muted">Unavailable.</p>`}</div>`,
+    `<div class="card"><h2>SESSION</h2><button class="alt" id="forget">Forget this browser</button></div>`,
+  ];
+  document.getElementById("app").innerHTML = cards.join("");
+  document.querySelectorAll("[data-m]").forEach(b => b.onclick = () => api("/api/media", { cmd: b.dataset.m }).then(tick).catch(() => {}));
+  document.getElementById("forget").onclick = () => { localStorage.removeItem(KEY); token = null; pairView("Forgotten."); };
+  clock();
+}
+
+function clock() {
+  const c = document.getElementById("clock"); if (!c) return;
+  const d = new Date(); c.textContent = d.toLocaleTimeString(); document.getElementById("date").textContent = d.toDateString();
+}
+
+async function tick() {
+  const status = document.getElementById("status");
+  if (!token) { status.textContent = "Not paired"; pairView(); return; }
+  try {
+    render(await api("/api/snapshot"));
+    status.textContent = "PC online"; status.style.color = "var(--ok)";
+  } catch (e) {
+    if (e.status === 401) { localStorage.removeItem(KEY); token = null; pairView("Token rejected; pair again."); return; }
+    status.textContent = "PC offline"; status.style.color = "var(--bad)";
+  }
+}
+setInterval(clock, 1000);
+setInterval(() => { if (!document.hidden && token) tick(); }, 5000);
+tick();
+</script>
+</body>
+</html>

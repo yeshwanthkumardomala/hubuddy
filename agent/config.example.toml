@@ -1,0 +1,43 @@
+# Copy to config.toml (next to start-agent.ps1) or to ~/.hubuddy/config.toml. Every section is optional.
+
+[claude]
+enabled = true            # token usage from Claude Code's session logs; limits and alerts need `claude_setup`
+
+[internet]
+enabled = true
+# targets = [["1.1.1.1", 443], ["8.8.8.8", 443]]   # what to probe for latency and loss
+
+[calendar]
+days = 7
+[[calendar.feeds]]
+name  = "Work"
+url   = "https://example.com/calendar.ics"          # any ICS link, or a path like C:\\Users\\me\\cal.ics
+color = "#2EC4B6"
+
+[github]
+token_env = "HUBUDDY_GITHUB_TOKEN"   # name of an environment variable holding a token (never put the token here)
+
+# Buttons shown on the phone. The phone only sends the button number; the PC runs exactly what is written here.
+[[shortcuts]]
+label = "Lock PC"
+action = "lock"
+
+[[shortcuts]]
+label = "Mute"
+action = "volume"
+target = "mute"          # up | down | mute
+
+[[shortcuts]]
+label = "Screenshot"
+action = "keys"
+target = "win+shift+s"
+
+[[shortcuts]]
+label = "Docs"
+action = "open"
+target = "https://github.com"
+
+# [[shortcuts]]
+# label = "Notepad"
+# action = "run"
+# target = "notepad.exe"

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The agent runs on your own PC over plain HTTP on the LAN or via adb reverse.
+     Cleartext is permitted so that works, but the app itself refuses any agent
+     address that is not loopback/private (see AddressValidator). Plain HTTP is NOT
+     encrypted: use a trusted network, or USB (adb reverse) mode. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

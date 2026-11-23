@@ -1,0 +1,100 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// First-login credentials are NOT stored in the repository. They are baked into your build from, in order:
+//   local.properties (never committed):  hubuddy.bootstrapLogin=...   hubuddy.bootstrapPin=...
+//   environment variables:               HUBUDDY_BOOTSTRAP_LOGIN / HUBUDDY_BOOTSTRAP_PIN
+// If neither is set, a random 9-digit login number and 6-digit PIN are generated and printed by the build.
+// Either way they are temporary: the app forces a PIN change on the first login.
+def localProps = new Properties()
+def localFile = rootProject.file('local.properties')
+if (localFile.exists()) localFile.withInputStream { localProps.load(it) }
+def rnd = new java.security.SecureRandom()
+def bootstrapLogin = localProps.getProperty('hubuddy.bootstrapLogin') ?: System.getenv('HUBUDDY_BOOTSTRAP_LOGIN')
+def bootstrapPin = localProps.getProperty('hubuddy.bootstrapPin') ?: System.getenv('HUBUDDY_BOOTSTRAP_PIN')
+if (!bootstrapLogin || !bootstrapPin) {
+    bootstrapLogin = String.format('%09d', 100000000 + rnd.nextInt(900000000))
+    // Digits that are not all equal and not a sequence, so the generated PIN is a valid temporary PIN.
+    bootstrapPin = String.format('%06d', 100000 + rnd.nextInt(900000))
+    gradle.taskGraph.whenReady { logger.lifecycle("Hubuddy first-login credentials generated for this build: login ${bootstrapLogin}, PIN ${bootstrapPin}") }
+}
+
+android {
+    namespace 'com.sidya.hubuddy'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.sidya.hubuddy'
+        minSdk 21          // Android 5.0+: virtually every Android phone in use (Vivo 1902 is Android 9)
+        targetSdk 34
+        versionCode 5
+        versionName '2.0.0'
+        buildConfigField 'String', 'BOOTSTRAP_LOGIN', "\"${bootstrapLogin}\""
+        buildConfigField 'String', 'BOOTSTRAP_PIN', "\"${bootstrapPin}\""
+        resourceConfigurations += ['en']
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        release {
+            // Signed with the local debug key so the small, optimised build can be sideloaded
+            // for testing. Use your own keystore (never committed) for any real distribution.
+            signingConfig signingConfigs.debug
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            returnDefaultValues = false
+            all {
+                // Robolectric's sandbox needs some headroom.
+                maxHeapSize = '1g'
+                // Optional: where Robolectric downloads its Android runtime jars (default Maven Central).
+                // Screenshot generator (skipped otherwise): gradlew testDebugUnitTest -Pscreenshots=<dir> --tests '*Screenshots*'
+                if (project.hasProperty('screenshots')) {
+                    systemProperty 'hubuddy.screenshots', project.property('screenshots')
+                }
+                if (project.hasProperty('robolectricRepoUrl')) {
+                    systemProperty 'robolectric.dependency.repo.url', project.property('robolectricRepoUrl')
+                }
+            }
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/*.kotlin_module', 'kotlin/**', 'DebugProbesKt.bin', 'META-INF/versions/**']
+        }
+    }
+
+    lint {
+        abortOnError true
+        checkReleaseBuilds false
+        disable 'VectorPath', 'ObsoleteSdkInt', 'GradleDependency', 'OldTargetApi', 'SetTextI18n', 'HardcodedText', 'IconLauncherShape', 'MonochromeLauncherIcon'
+    }
+}
+
+dependencies {
+    // Deliberately no AndroidX / Material / OkHttp: framework widgets, HttpURLConnection
+    // and org.json keep the APK small and fast on a low-end Android 9 phone.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+    testImplementation 'org.json:json:20240303' // real org.json for plain JVM tests
+}

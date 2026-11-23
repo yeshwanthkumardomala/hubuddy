@@ -1,0 +1,8 @@
+{
+  "name": "Hubuddy",
+  "short_name": "Hubuddy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0E0F11",
+  "theme_color": "#0E0F11"
+}

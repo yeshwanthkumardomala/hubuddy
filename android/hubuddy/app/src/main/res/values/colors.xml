@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme colours used by XML. The full palette (walnut accents, status colours) is in ui/Ui.kt (Pal). -->
+    <color name="bg">#0E0F11</color>
+    <color name="surface">#1A1C1F</color>
+    <color name="accent">#2EC4B6</color>
+    <color name="text">#F2F3F5</color>
+    <color name="text_dim">#9AA0A6</color>
+</resources>
